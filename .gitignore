@@ -1,0 +1,16 @@
+.pio/
+.pioenvs/
+.piolibdeps/
+.clang_complete
+.gcc-flags.json
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.hex
+*.bin
+*.elf
+*.map
+platformio_local.ini
+.env
+test/native/test_safety_gate
