@@ -1,8 +1,15 @@
 /*  ================================================================
-    FOLLOWER DRONE — ESP32 Companion Controller
+    FOLLOWER DRONE — ESP32 Companion Controller  (v3)
     Hardware: ESP32 + Pixy2 (SPI) + MicoAir H743 AIO (UART1, MAVLink2)
 
-    Tracking strategy:
+    v3: the armed/mode/link-timeout gating logic now lives in
+    safety_gate.h — a pure, hardware-independent function that's
+    ALSO compiled and tested standalone on desktop (test/native/).
+    This file calls that exact function; it does not reimplement the
+    logic inline anymore, so a passing native test is a guarantee
+    about this actual flight code, not a parallel copy of it.
+
+    Tracking strategy unchanged:
       PRIMARY   — Pixy2 color blob (subject wears a colored beacon)
       FALLBACK  — Pixy2 line/silhouette tracking (CC mode 2)
       LOST      — hold position, emit warning
@@ -12,6 +19,7 @@
 #include <Pixy2.h>
 #include <MAVLink.h>
 #include "config.h"
+#include "safety_gate.h"
 
 Pixy2 pixy;
 
@@ -30,6 +38,7 @@ uint32_t lastFcHeartbeatMs = 0;
 mavlink_status_t mavStatus;
 mavlink_message_t mavMsg;
 
+// ── Outgoing helpers ─────────────────────────────────────────────
 void sendBytes(uint8_t* buf, uint16_t len) { FC_SERIAL.write(buf, len); }
 
 void sendHeartbeat() {
@@ -42,17 +51,15 @@ void sendHeartbeat() {
     sendBytes(buf, len);
 }
 
+/*  Every velocity command goes through evaluate_safety_gate() first -
+    the SAME function proven by test/native/test_safety_gate.cpp. */
 void sendVelocity(float vx, float vy, float vz) {
-    if (!fcArmed) {
-        Serial.println("[GATE] FC not armed - suppressing velocity command");
-        return;
-    }
-    if (fcCustomMode != ARDUCOPTER_MODE_GUIDED) {
-        Serial.printf("[GATE] FC not in GUIDED (mode=%d) - suppressing velocity command\n", fcCustomMode);
-        return;
-    }
-    if (millis() - lastFcHeartbeatMs > FC_LINK_TIMEOUT_MS) {
-        Serial.println("[GATE] FC link stale - suppressing velocity command");
+    SafetyGateResult gate = evaluate_safety_gate(
+        fcArmed, fcCustomMode, ARDUCOPTER_MODE_GUIDED,
+        lastFcHeartbeatMs, millis(), FC_LINK_TIMEOUT_MS
+    );
+    if (!gate.should_command) {
+        Serial.printf("[GATE] Suppressed: %s\n", gate.reason);
         return;
     }
 
@@ -85,6 +92,7 @@ float pxToVel(int err, int deadZone, float kP) {
     return kP * (float)(abs(err) - deadZone) * sign;
 }
 
+// ── Incoming: parse the FC's own HEARTBEAT to track armed/mode ────
 void pollFcHeartbeat() {
     while (FC_SERIAL.available()) {
         uint8_t c = FC_SERIAL.read();
@@ -108,6 +116,7 @@ void pollFcHeartbeat() {
     }
 }
 
+// ── Primary tracking: color blob ──────────────────────────────────
 bool runPrimary(float &vx, float &vy, float &vz) {
     int n = pixy.ccc.getBlocks();
     if (n <= 0) return false;
@@ -138,6 +147,7 @@ bool runPrimary(float &vx, float &vy, float &vz) {
     return true;
 }
 
+// ── Fallback tracking: line / silhouette ──────────────────────────
 bool runFallback(float &vx, float &vy, float &vz) {
     pixy.line.getMainFeatures();
     if (!(pixy.line.numVectors)) return false;
@@ -154,6 +164,7 @@ bool runFallback(float &vx, float &vy, float &vz) {
     return true;
 }
 
+// ─────────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     FC_SERIAL.begin(FC_BAUD, SERIAL_8N1, 16, 17);
@@ -167,6 +178,7 @@ void setup() {
     Serial.println("[FOLLOWER] Waiting for FC heartbeat before commanding...");
 }
 
+// ─────────────────────────────────────────────────────────────────
 void loop() {
     static uint32_t lastHeartbeatMs = 0;
     static uint32_t lastCmdMs       = 0;
