@@ -32,8 +32,8 @@ int      primaryMissCount = 0;
 bool     fcArmed          = false;
 uint8_t  fcCustomMode     = 0;
 uint32_t lastFcHeartbeatMs = 0;
-#define ARDUCOPTER_MODE_GUIDED  4
-#define FC_LINK_TIMEOUT_MS      3000
+// ARDUCOPTER_MODE_GUIDED and FC_LINK_TIMEOUT_MS now live in config.h,
+// alongside every other tunable — see the note there on why.
 
 mavlink_status_t mavStatus;
 mavlink_message_t mavMsg;
