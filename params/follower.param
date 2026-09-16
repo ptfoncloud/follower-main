@@ -93,14 +93,22 @@ EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
                                 # velocity control still works fine on flow alone
 
 # ---- Arming checks ----
-# Compass and GPS checks disabled since neither is fitted — everything
-# else stays ON. Do not disable more than this without understanding
-# exactly what you're bypassing.
+# ARMING_CHECK is ArduPilot's ONLY arming-check parameter — a single
+# bitmask, where the value 1 specifically means "all checks," not bit
+# position 0. There is no separate "ARMING_CHECK_MASK" parameter; an
+# earlier draft of this file invented one that doesn't exist in real
+# ArduPilot and would have silently done nothing on load.
+#
+# Left at 1 (all checks, including compass and GPS) deliberately. With
+# no compass or GPS fitted, this means the FC will correctly REFUSE TO
+# ARM until you either add those sensors, or go into Mission Planner's
+# Setup -> Mandatory Hardware -> Arming Checks screen and manually
+# UNCHECK just "Compass" and "GPS Lock" there. Doing it through that
+# GUI is deliberate: it shows you exactly which checks are on/off with
+# no bitmask arithmetic to get wrong, which matters here because
+# getting a hand-computed bitmask wrong risks silently disabling MORE
+# checks than intended, not fewer — the dangerous direction to err in.
 ARMING_CHECK,1
-ARMING_CHECK_MASK,-9           # all checks except compass(bit3) and GPS(bit2)... 
-# NOTE: verify this bitmask in Mission Planner's arming check GUI rather
-# than trusting the raw number — easier and less error-prone than hand
-# computing a bitmask.
 
 # ---- Failsafes ----
 FS_THR_ENABLE,1                # RC loss failsafe ON
