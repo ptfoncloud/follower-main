@@ -225,7 +225,7 @@ void loop() {
             }
             break;
 
-        case MODE_FALLBACK:
+        case MODE_FALLBACK: {
             detected = runFallback(vx, vy, vz);
             if (detected) {
                 lastDetectMs = now;
@@ -235,30 +235,57 @@ void loop() {
                 Serial.println("[FOLLOWER] Fallback lost -> LOST");
                 trackMode = MODE_LOST;
             }
-            pixy.changeProg("ccc");
-            if (runPrimary(vx, vy, vz)) {
-                Serial.println("[FOLLOWER] Primary recovered -> PRIMARY");
-                trackMode = MODE_PRIMARY;
-                primaryMissCount = 0;
-                lastDetectMs = now;
-                sendVelocity(vx, vy, vz);
-                break;
-            }
-            pixy.changeProg("line");
-            break;
 
-        case MODE_LOST:
+            // Periodically check whether PRIMARY tracking has come back,
+            // rather than every single loop iteration. Pixy2's
+            // changeProg() switches its whole internal pipeline, so
+            // round-tripping line->ccc->line every 100ms (10x/second)
+            // would mean constantly interrupting the fallback tracker
+            // right after it switches back in - real overhead, no
+            // benefit, since recovery a few hundred ms later than
+            // "instant" costs nothing here. Checking every 5th cycle
+            // (roughly twice a second at this loop's 100ms cadence)
+            // is responsive enough while leaving the fallback tracker
+            // mostly undisturbed.
+            static uint8_t recoveryCheckCounter = 0;
+            if (++recoveryCheckCounter >= 5) {
+                recoveryCheckCounter = 0;
+                pixy.changeProg("ccc");
+                if (runPrimary(vx, vy, vz)) {
+                    Serial.println("[FOLLOWER] Primary recovered -> PRIMARY");
+                    trackMode = MODE_PRIMARY;
+                    primaryMissCount = 0;
+                    lastDetectMs = now;
+                    sendVelocity(vx, vy, vz);
+                    break;
+                }
+                pixy.changeProg("line");
+            }
+            break;
+        }
+
+        case MODE_LOST: {
             sendHold();
             digitalWrite(STATUS_LED, (now / 100) % 2);
-            pixy.changeProg("ccc");
-            if (runPrimary(vx, vy, vz)) {
-                Serial.println("[FOLLOWER] Recovered -> PRIMARY");
-                trackMode = MODE_PRIMARY;
-                primaryMissCount = 0;
-                lastDetectMs = now;
-                sendVelocity(vx, vy, vz);
+
+            // Same periodic-probe reasoning as MODE_FALLBACK above -
+            // no need to hammer changeProg() every iteration while
+            // holding position; a couple of checks per second is
+            // plenty responsive for "the beacon came back."
+            static uint8_t lostRecoveryCounter = 0;
+            if (++lostRecoveryCounter >= 5) {
+                lostRecoveryCounter = 0;
+                pixy.changeProg("ccc");
+                if (runPrimary(vx, vy, vz)) {
+                    Serial.println("[FOLLOWER] Recovered -> PRIMARY");
+                    trackMode = MODE_PRIMARY;
+                    primaryMissCount = 0;
+                    lastDetectMs = now;
+                    sendVelocity(vx, vy, vz);
+                }
             }
             break;
+        }
     }
 
     if (!detected && trackMode != MODE_LOST) {
