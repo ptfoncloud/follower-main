@@ -43,8 +43,8 @@ DevKitC-style boards do).
 
 ## 2. Flight controller setup (props OFF)
 
-- [ ] Note the ArduCopter version (Mission Planner title bar / Messages).
-  The param file targets **4.6.x**. On 4.7+ apply the commented 4.7 lines.
+- [ ] Flash **ArduCopter 4.7.2** (Install Firmware → the quad icon). The
+  param file is written for 4.7.
 - [ ] Load `params/follower.param`, write, reboot, load again (some
   parameters only appear after a reboot), reboot.
 - [ ] Accelerometer calibration.

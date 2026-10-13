@@ -39,16 +39,18 @@ SERIAL1_BAUD,57
 # docs/MTF01_SETUP.md. Without mav_id != 1, ArduPilot 4.5+ may not
 # recognise it.
 #
-# TARGET VERSION: ArduCopter 4.6.x. Firmware version was not confirmed
-# when this file was written — check Mission Planner before loading.
+# TARGET VERSION: ArduCopter 4.7.2 (what's flashed). 4.6 equivalents are
+# left as comments.
 SERIAL4_PROTOCOL,1             # MAVLink1 (what the MTF-01 speaks), not 2
 SERIAL4_BAUD,115               # 115200
-SERIAL4_OPTIONS,1024           # bit 10: don't forward MAVLink to/from this port (4.6 and earlier)
-# ArduCopter 4.7+: bit 10 above moved to MAVx_OPTIONS, where x counts
-# MAVLink-protocol serial ports, not SERIALx numbers. With SERIAL0 (USB),
-# SERIAL1 (ESP32) and SERIAL4 on MAVLink, SERIAL4 is most likely MAV3.
-# Reboot after setting SERIAL4_PROTOCOL, then confirm which MAVx it is.
-# MAV3_OPTIONS,2               # 4.7+ only: don't forward MAVLink to/from
+# Don't forward MAVLink to/from the MTF-01. On 4.7 this lives in
+# MAVx_OPTIONS, x = the Nth MAVLink-protocol serial port counted from
+# SERIAL0 (AP_SerialManager::find_protocol_instance). Here: SERIAL0 USB =
+# MAV1, SERIAL1 ESP32 = MAV2, SERIAL4 MTF-01 = MAV3. Only valid while
+# SERIAL2/SERIAL3 are NOT MAVLink - if you change those, renumber.
+# The option only shows up after a reboot with SERIAL4_PROTOCOL set.
+MAV3_OPTIONS,2                 # bit 1: don't forward mavlink to/from
+# SERIAL4_OPTIONS,1024         # 4.6 and earlier instead of the line above
 
 # ---- SERIAL5 (UART6) — ELRS RX ----
 # Already RCIN by default on this board. CRSF auto-detected. No protocol
@@ -113,11 +115,11 @@ FLOW_POS_Y,0.0                 # TODO: measure (BOM: lens at y = -9 mm from fram
 FLOW_POS_Z,0.0                 # TODO: measure
 RNGFND1_TYPE,10                # MAVLink rangefinder
 RNGFND1_ORIENT,25              # Down
-RNGFND1_MIN_CM,1               # 4.6 and earlier: centimetres
-RNGFND1_MAX_CM,800             # 8 m
-# ArduCopter 4.7+ renamed these to metres:
-# RNGFND1_MIN,0.01
-# RNGFND1_MAX,8
+RNGFND1_MIN,0.01               # metres (4.7+)
+RNGFND1_MAX,8                  # 8 m
+# 4.6 and earlier used centimetres instead:
+# RNGFND1_MIN_CM,1
+# RNGFND1_MAX_CM,800
 
 # ---- EKF3 sources — flow-based nav (no GPS assumed for indoor flight) ----
 EK3_ENABLE,1
@@ -143,12 +145,12 @@ EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
 # no bitmask arithmetic to get wrong, which matters here because
 # getting a hand-computed bitmask wrong risks silently disabling MORE
 # checks than intended, not fewer — the dangerous direction to err in.
-ARMING_CHECK,1
-# ArduCopter 4.7+: ARMING_CHECK no longer exists. It was replaced by
-# ARMING_SKIPCHK, an inverted mask whose default 0 means "skip nothing" —
-# the same safe outcome as ARMING_CHECK=1. On 4.7 Mission Planner will
-# report ARMING_CHECK as unknown when loading this file; that is expected.
-# Do not "fix" it by setting ARMING_SKIPCHK to anything but 0 here.
+# 4.7 removed ARMING_CHECK. Its replacement ARMING_SKIPCHK is inverted:
+# 0 = skip nothing, the same as the old ARMING_CHECK,1. Unticking "GPS
+# Lock" in the Arming Checks screen sets the right bit for you; don't
+# hand-edit this mask.
+ARMING_SKIPCHK,0
+# ARMING_CHECK,1               # 4.6 and earlier instead of the line above
 
 # ---- Failsafes ----
 FS_THR_ENABLE,3                # RC loss failsafe: always LAND (not RTL - no GPS fix indoors, so no home)

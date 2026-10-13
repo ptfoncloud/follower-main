@@ -45,26 +45,25 @@ leaving the sensor wired to SERIAL4:
 
 ## 2. FC side (already in `params/follower.param`)
 
-For **ArduCopter 4.6.x** (what the param file targets):
+For **ArduCopter 4.7.2** (what's flashed):
 
 ```
 SERIAL4_PROTOCOL,1      # MAVLink1
 SERIAL4_BAUD,115
-SERIAL4_OPTIONS,1024    # don't forward MAVLink to/from this port
+MAV3_OPTIONS,2          # don't forward MAVLink to/from SERIAL4
 FLOW_TYPE,5             # MAVLink
 RNGFND1_TYPE,10         # MAVLink
 RNGFND1_ORIENT,25       # down
-RNGFND1_MIN_CM,1
-RNGFND1_MAX_CM,800
+RNGFND1_MIN,0.01        # metres
+RNGFND1_MAX,8
 ```
 
-For **ArduCopter 4.7+**, two things moved:
+`MAV3` because `x` counts MAVLink-protocol serial ports from SERIAL0 up:
+SERIAL0 (USB), SERIAL1 (ESP32), SERIAL4 (MTF-01). If you ever put
+SERIAL2 or SERIAL3 on MAVLink, the number shifts.
 
-- "Don't forward MAVLink" is `MAVx_OPTIONS,2`, where `x` counts
-  MAVLink-protocol ports (not SERIAL numbers). After setting
-  `SERIAL4_PROTOCOL,1` and rebooting, find which `MAVx` belongs to
-  SERIAL4 (most likely `MAV3`: SERIAL0, SERIAL1, SERIAL4).
-- Range limits are in metres: `RNGFND1_MIN,0.01`, `RNGFND1_MAX,8`.
+On 4.6 and earlier it was `SERIAL4_OPTIONS,1024` and
+`RNGFND1_MIN_CM,1` / `RNGFND1_MAX_CM,800` instead.
 
 Reboot after changing `FLOW_TYPE` / `RNGFND1_TYPE` — the related
 parameters only appear afterwards.

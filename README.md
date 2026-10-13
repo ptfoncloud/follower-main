@@ -31,7 +31,7 @@ the thermal-tracking service that runs on Henri lives in
 | RC transmitter | BetaFPV LiteRadio 3 |
 | GPS + compass | Walksnail WS-M181 (M10 GPS on SERIAL3, QMC5883 compass on I2C; compass used for yaw) |
 | Companion power | Pololu 5V 3A step-down (ESP32 + Pixy2), separate from the FC's 5V |
-| Firmware | ArduCopter 4.6.x (param file target; confirm in Mission Planner) |
+| Firmware | ArduCopter 4.7.2 |
 
 ## The one thing worth understanding before anything else
 
@@ -93,10 +93,9 @@ sync with the real flight code.
 
 ## Setup, in order
 
-1. **Check your ArduCopter version, then read `params/follower.param`**
-   and its comments before loading it. The file targets **4.6.x**; 4.7+
-   renamed several parameters (the alternatives are in the file as
-   comments). `FLOW_POS_X/Y/Z` still need a physical CG measurement.
+1. **Flash ArduCopter 4.7.2, then read `params/follower.param`** and its
+   comments before loading it. It's written for 4.7; the 4.6 names are
+   in the file as comments. `FLOW_POS_X/Y/Z` still need a physical CG measurement.
    Set up the MTF-01 itself first: `docs/MTF01_SETUP.md`.
 2. **Bench-test the Pixy2 link** — `pio run -e pixy_bench -t upload`,
    then `pio device monitor -e pixy_bench` (no FC needed). Then **train
