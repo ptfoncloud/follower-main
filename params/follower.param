@@ -20,7 +20,15 @@
 
 # ---- Frame ----
 FRAME_CLASS,1                  # Quad
-FRAME_TYPE,1                   # X
+FRAME_TYPE,12                  # BetaFlightX. the board's own default (HAL_FRAME_TYPE_DEFAULT 12),
+                                # the AIO's ESC pads follow betaflight motor order. 1 (ArduPilot X)
+                                # maps motors to the wrong arms = flips on takeoff. check with motor test
+
+# ---- Motor output ----
+# PWM1-4 are the built in AM32 ESC, all one timer group (TIM1) so they share
+# a protocol. hwdef doesn't set this so it would default to normal PWM.
+# DShot600 needs no ESC calibration. all outputs support DShot, 1-8 bidir.
+MOT_PWM_TYPE,6                 # DShot600
 
 # ---- SERIAL1 (UART1), ESP32 ----
 # has to match FC_BAUD 57600 in config.h. MAVLink2 is already the default,
@@ -50,13 +58,13 @@ MAV3_OPTIONS,2                 # bit 1: don't forward mavlink to/from
 SERIAL5_PROTOCOL,23
 
 # ---- Battery monitor ----
-# Board defaults. The wiki says BATT_VOLT_MULT 21.2 but the hwdef has
-# HAL_BATT_VOLT_SCALE 21.12. Neither is a calibration, check against a
-# multimeter and adjust BATT_VOLT_MULT.
+# Board defaults from the hwdef (HAL_BATT_VOLT_SCALE 21.12,
+# HAL_BATT_CURR_SCALE 14.14). Still not a calibration, check voltage against
+# a multimeter and adjust BATT_VOLT_MULT.
 BATT_MONITOR,4
 BATT_VOLT_PIN,10
 BATT_CURR_PIN,11
-BATT_VOLT_MULT,21.2
+BATT_VOLT_MULT,21.12
 BATT_AMP_PERVLT,14.14
 
 # ---- Battery failsafe ----

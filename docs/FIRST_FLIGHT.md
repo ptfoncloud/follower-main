@@ -26,6 +26,11 @@ stop and fix it.
 
 TX goes to RX. All grounds common.
 
+The FC is 36 x 36 mm with 25.5 mm M3 holes (MicoAir743-AIO). The FC tray
+is 28 mm wide so the board overhangs it, dry fit it and check the
+overhang clears the arms, motor wires and the connectors before
+soldering anything.
+
 ### Power
 
 | Rail | Feeds |
@@ -63,8 +68,14 @@ boards do).
 ## 3. Motors (props off)
 
 - [ ] Mission Planner motor test: each motor in the right spot and
-  spinning the right way for Quad X. Swap any two motor wires to
-  reverse one.
+  spinning the right way. The param file uses `FRAME_TYPE,12`
+  (BetaFlightX, the board default) so motor order follows the
+  betaflight layout of the AIO's ESC pads, not ArduPilot's normal X
+  order. Swap any two motor wires (or flip direction in the AM32
+  config) to reverse one.
+- [ ] Motors are on DShot600 (`MOT_PWM_TYPE,6`), so no ESC calibration.
+  If the motors don't respond at all in the motor test, check that
+  first.
 - [ ] E-stop switch kills all motors instantly while armed
 
 ## 4. Sensors
