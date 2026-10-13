@@ -38,3 +38,13 @@ jobs:
         run: g++ -std=c++17 -Wall -Wextra -Werror -o test_thermal_wire test/native/test_thermal_wire.cpp
       - name: Run thermal wire-format tests
         run: ./test_thermal_wire
+
+  param-file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Param file loads in Mission Planner
+        run: python scripts/check_param_file.py params/follower.param

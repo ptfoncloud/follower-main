@@ -20,15 +20,19 @@
 #
 # Load with Mission Planner: Config > Full Parameter List > Load from file.
 # Read it before writing it, it's a starting point.
+# Comments have to start at column 0. Mission Planner only skips lines that
+# START with '#', an indented comment fails the whole load. Check with
+# python scripts/check_param_file.py params/follower.param
 # ============================================================
 
 # ---- Frame ----
 FRAME_CLASS,1                  # Quad
-FRAME_TYPE,12                  # BetaFlightX: M1 rear-right, M2 front-right, M3 rear-left, M4 front-left.
-                                # The AIO's ESC pads follow betaflight motor order. Has to be set here:
-                                # the 743v2 hwdef says `HAL_FRAME_TYPE 12` but copter only reads
-                                # HAL_FRAME_TYPE_DEFAULT, so the firmware default is still 1 (ArduPilot X),
-                                # which puts motors on the wrong arms = flips on takeoff. motor test to confirm
+# FRAME_TYPE 12 = BetaFlightX: M1 rear-right, M2 front-right, M3 rear-left,
+# M4 front-left. The AIO's ESC pads follow betaflight motor order. Has to be
+# set here: the 743v2 hwdef says `HAL_FRAME_TYPE 12` but copter only reads
+# HAL_FRAME_TYPE_DEFAULT, so the firmware default is still 1 (ArduPilot X),
+# which puts motors on the wrong arms = flips on takeoff. motor test to confirm
+FRAME_TYPE,12                  # BetaFlightX
 
 # ---- Motor output ----
 # PWM1-4 are the built in Bluejay ESC (0.19.2, DShot300/600 + bidirectional
@@ -139,8 +143,8 @@ EK3_ENABLE,1
 EK3_SRC1_VELXY,5               # optical flow for XY velocity
 EK3_SRC1_VELZ,0                # none (default 3 = GPS, no fix indoors). per ardupilot.org flow setup
 EK3_SRC1_POSZ,2                # rangefinder for altitude
-EK3_SRC1_POSXY,0               # no XY position source without GPS, GUIDED
-                                # velocity still works on flow alone
+# no XY position source without GPS, GUIDED velocity still works on flow alone
+EK3_SRC1_POSXY,0
 
 # ---- Arming checks ----
 # All checks on. Compass check stays on since the WS-M181 compass is used
@@ -157,9 +161,9 @@ ARMING_SKIPCHK,0
 FS_THR_ENABLE,3                # RC loss: always LAND (not RTL, no GPS fix indoors so no home)
 FS_THR_VALUE,975               # throttle PWM below this = failsafe
 FS_OPTIONS,0
-FS_GCS_ENABLE,0                # no GCS failsafe. losing the companion link
-                                # shouldn't trigger one, RC loss is the
-                                # one that matters
+# no GCS failsafe. losing the companion link shouldn't trigger one, RC loss
+# is the one that matters
+FS_GCS_ENABLE,0
 
 # ---- GUIDED (what the ESP32's velocity commands use) ----
 GUID_OPTIONS,0
