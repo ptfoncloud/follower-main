@@ -21,12 +21,12 @@ stop and fix it.
 | MTF-01 TX / RX | FC RX4 / TX4 (UART4 / SERIAL4) | MAVLink1, 115200, see `MTF01_SETUP.md` |
 | WS-M181 GPS TX / RX | FC RX3 / TX3 (UART3 / SERIAL3) | |
 | WS-M181 compass SDA / SCL | FC I2C SDA / SCL | QMC5883, keep it away from the ESC and battery leads |
-| RP1 TX / RX | FC RX6 / TX6 (UART6 / SERIAL5) | CRSF, needs both wires for telemetry |
+| RP1 TX / RX | FC RX6 / TX6 (UART6 / SERIAL6) | CRSF, needs both wires for telemetry |
 | MLX90640 SDA / SCL | ESP32 GPIO21 / GPIO22 | only if thermal streaming is hooked up |
 
 TX goes to RX. All grounds common.
 
-The FC is 36 x 36 mm with 25.5 mm M3 holes (MicoAir743-AIO). The FC tray
+The FC is 36 x 36 mm with 25.5 mm M3 holes (MicoAir743v2 AIO 35A). The FC tray
 is 28 mm wide so the board overhangs it, dry fit it and check the
 overhang clears the arms, motor wires and the connectors before
 soldering anything.
@@ -67,13 +67,26 @@ boards do).
 
 ## 3. Motors (props off)
 
-- [ ] Mission Planner motor test: each motor in the right spot and
-  spinning the right way. The param file uses `FRAME_TYPE,12`
-  (BetaFlightX, the board default) so motor order follows the
-  betaflight layout of the AIO's ESC pads, not ArduPilot's normal X
-  order. Swap any two motor wires (or flip direction in the AM32
-  config) to reverse one.
-- [ ] Motors are on DShot600 (`MOT_PWM_TYPE,6`), so no ESC calibration.
+- [ ] Check `FRAME_TYPE` reads 12 after loading the params. The firmware
+  default on this target is 1, which puts motors on the wrong arms.
+- [ ] Mission Planner motor test, props off. `FRAME_TYPE,12` is
+  BetaFlightX, so outputs follow the betaflight layout of the AIO's ESC
+  pads (from ArduPilot's AP_MotorsMatrix BF_X table):
+
+  | Output | Position | Spin | Motor test button |
+  |---|---|---|---|
+  | M1 | rear right | CW | B |
+  | M2 | front right | CCW | A |
+  | M3 | rear left | CCW | C |
+  | M4 | front left | CW | D |
+
+  Mission Planner's motor test goes by letter, clockwise from front right
+  (A = front right = M2, not M1). Each button has to spin the motor in
+  that spot in that direction. Wrong spot = wrong frame type or pads,
+  stop. Wrong direction = swap any two of that motor's wires (or reverse
+  it in the Bluejay config).
+- [ ] Motors are on DShot600 (`MOT_PWM_TYPE,6`, the Bluejay ESC does
+  DShot300/600), so no ESC calibration.
   If the motors don't respond at all in the motor test, check that
   first.
 - [ ] E-stop switch kills all motors instantly while armed

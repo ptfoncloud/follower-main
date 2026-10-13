@@ -1,5 +1,5 @@
 /*  follower - ESP32 companion firmware
-    ESP32 + Pixy2 (SPI) + MicoAir H743 AIO (UART1, MAVLink2)
+    ESP32 + Pixy2 (SPI) + MicoAir743v2 AIO (UART1, MAVLink2)
 
     The armed/mode/link timeout check is in safety_gate.h so it can be
     tested on desktop (test/native/). This file calls that same

@@ -7,7 +7,7 @@
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 Flight side of the follower drone. ESP32 companion firmware that tracks
-a beacon with a Pixy2 and sends velocity commands to a MicoAir743-AIO
+a beacon with a Pixy2 and sends velocity commands to a MicoAir743v2 AIO
 running ArduCopter, plus the param file and the docs for setting it up
 and flying it.
 
@@ -22,7 +22,7 @@ thermal tracking service (runs on Henri) in
 
 | Component | Part |
 |---|---|
-| Flight controller | MicoAir743-AIO (STM32H743, built-in 35A 4-in-1 ESC) |
+| Flight controller | MicoAir743v2 AIO 35A (STM32H743, built-in Bluejay 35A 4-in-1 ESC, firmware target MicoAir743v2) |
 | Companion | ESP32 dev board |
 | Vision | Pixy2 (CMUcam5) over SPI |
 | Flow + rangefinder | MicoAir MTF-01 |

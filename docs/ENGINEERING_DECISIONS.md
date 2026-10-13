@@ -43,7 +43,7 @@ a second of lag.
 
 ## Compass yaw from the GPS module, no GPS nav indoors
 
-The MicoAir743-AIO has no compass. The Walksnail WS-M181 has a QMC5883
+The MicoAir743v2 AIO has no compass on board. The Walksnail WS-M181 has a QMC5883
 on I2C, so that's the EKF yaw source (`EK3_SRC1_YAW,1`), same as
 ArduPilot's optical flow setup. Before that it was gyro only yaw, which
 drifts. Position and velocity still come from the MTF-01

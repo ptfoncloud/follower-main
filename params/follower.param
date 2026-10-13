@@ -1,18 +1,22 @@
 # ============================================================
 # follower - ArduCopter 4.7.2 params
-# Board: MicoAir743-AIO (STM32H743)
+# Board: MicoAir743v2 AIO 35A (STM32H743, Bluejay 4in1 ESC, SPL06 baro).
+# Mission Planner shows "ArduCopter V4.7.2 on MicoAir743v2". MicoAir uses
+# the shared MicoAir743v2 target for the AIO, there's no separate AIO hwdef.
+# (NOT the older MicoAir743-AIO target, its UART order is different.)
 #
-# UART map (ardupilot.org/copter/docs/common-MicoAir743-AIO.html):
+# UART map (MicoAir743v2 hwdef.dat at Copter-4.7.2,
+# ardupilot.org/copter/docs/common-MicoAir743v2.html):
 #   SERIAL0 -> USB
 #   SERIAL1 -> UART1  (MAVLink2 default)    --> ESP32 companion
 #   SERIAL2 -> UART2  (DisplayPort default) --> unused, no VTX
-#   SERIAL3 -> UART3  (GPS default)         --> WS-M181 GPS (its QMC5883 compass goes on the FC I2C pads)
+#   SERIAL3 -> UART3  (GPS default)         --> WS-M181 GPS (its QMC5883L compass goes on the FC I2C pads)
 #   SERIAL4 -> UART4  (MAVLink2 default)    --> MTF-01 flow + rangefinder
-#   SERIAL5 -> UART6  (RCIN default)        --> ELRS RX (CRSF, wire both TX6 and RX6)
-#   SERIAL6 -> UART7  (RX only, ESC telemetry)
-#   SERIAL7 -> UART8  (free)
-# Matches the board's hwdef.dat in the firmware (4.6.3 and 4.7.2):
-#   SERIAL_ORDER OTG1 USART1 USART2 USART3 UART4 USART6 UART7 UART8
+#   SERIAL5 -> UART5  (none)                --> unused
+#   SERIAL6 -> UART6  (RCIN default)        --> ELRS RX (CRSF, wire both TX6 and RX6)
+#   SERIAL7 -> UART7  (RX only, ESC telemetry default)
+#   SERIAL8 -> UART8  (MAVLink2 115200 default) --> onboard bluetooth
+#   SERIAL_ORDER OTG1 USART1 USART2 USART3 UART4 UART5 USART6 UART7 UART8
 #
 # Load with Mission Planner: Config > Full Parameter List > Load from file.
 # Read it before writing it, it's a starting point.
@@ -20,14 +24,16 @@
 
 # ---- Frame ----
 FRAME_CLASS,1                  # Quad
-FRAME_TYPE,12                  # BetaFlightX. the board's own default (HAL_FRAME_TYPE_DEFAULT 12),
-                                # the AIO's ESC pads follow betaflight motor order. 1 (ArduPilot X)
-                                # maps motors to the wrong arms = flips on takeoff. check with motor test
+FRAME_TYPE,12                  # BetaFlightX: M1 rear-right, M2 front-right, M3 rear-left, M4 front-left.
+                                # The AIO's ESC pads follow betaflight motor order. Has to be set here:
+                                # the 743v2 hwdef says `HAL_FRAME_TYPE 12` but copter only reads
+                                # HAL_FRAME_TYPE_DEFAULT, so the firmware default is still 1 (ArduPilot X),
+                                # which puts motors on the wrong arms = flips on takeoff. motor test to confirm
 
 # ---- Motor output ----
-# PWM1-4 are the built in AM32 ESC, all one timer group (TIM1) so they share
-# a protocol. hwdef doesn't set this so it would default to normal PWM.
-# DShot600 needs no ESC calibration. all outputs support DShot, 1-8 bidir.
+# PWM1-4 are the built in Bluejay ESC (0.19.2, DShot300/600 + bidirectional
+# DShot), one timer group (TIM1) so they share a protocol. hwdef doesn't set
+# this so it would default to normal PWM. DShot600 needs no ESC calibration.
 MOT_PWM_TYPE,6                 # DShot600
 
 # ---- SERIAL1 (UART1), ESP32 ----
@@ -45,22 +51,29 @@ SERIAL4_BAUD,115               # 115200
 # Don't forward MAVLink to/from the MTF-01. On 4.7 that's MAVx_OPTIONS
 # where x = the Nth MAVLink serial port counting from SERIAL0
 # (AP_SerialManager::find_protocol_instance). SERIAL0 USB = MAV1, SERIAL1
-# ESP32 = MAV2, SERIAL4 MTF-01 = MAV3. Only holds while SERIAL2/3 aren't
-# MAVLink, renumber if that changes. Shows up after a reboot with
-# SERIAL4_PROTOCOL set.
+# ESP32 = MAV2, SERIAL4 MTF-01 = MAV3 (SERIAL8 bluetooth is MAV4). Only holds
+# while SERIAL2/3 aren't MAVLink, renumber if that changes. Shows up after a
+# reboot with SERIAL4_PROTOCOL set.
 MAV3_OPTIONS,2                 # bit 1: don't forward mavlink to/from
 # SERIAL4_OPTIONS,1024         # 4.6 and older use this instead
 
-# ---- SERIAL5 (UART6), ELRS RX ----
-# Already RCIN by default and CRSF gets auto detected. Only here as a
-# reminder to wire both TX6 and RX6, RX only still flies but you lose
-# RSSI/link quality telemetry.
-SERIAL5_PROTOCOL,23
+# ---- SERIAL5 (UART5), unused ----
+# Older versions of this file put the RC receiver here (that was the
+# MicoAir743-AIO target's mapping). Set back to none so a previously loaded
+# copy doesn't leave a second RCIN port on UART5.
+SERIAL5_PROTOCOL,-1
+
+# ---- SERIAL6 (UART6), ELRS RX ----
+# Already RCIN by default on the 743v2 and CRSF gets auto detected. Wire both
+# TX6 and RX6, RX only still flies but you lose RSSI/link quality telemetry.
+SERIAL6_PROTOCOL,23
 
 # ---- Battery monitor ----
-# Board defaults from the hwdef (HAL_BATT_VOLT_SCALE 21.12,
-# HAL_BATT_CURR_SCALE 14.14). Still not a calibration, check voltage against
-# a multimeter and adjust BATT_VOLT_MULT.
+# 21.12 / 14.14 are MicoAir's values for the AIO 35A
+# (micoair.com/flightcontroller_micoair743v2_aio_35a). The shared 743v2 hwdef
+# has HAL_BATT_CURR_SCALE 40.2, that's the standalone board, so
+# BATT_AMP_PERVLT has to be set here. Still not a calibration, check voltage
+# against a multimeter (and current against a meter/known load if you can).
 BATT_MONITOR,4
 BATT_VOLT_PIN,10
 BATT_CURR_PIN,11
@@ -77,10 +90,10 @@ BATT_FS_CRT_ACT,1              # LAND on critical battery
 BATT_ARM_VOLT,15.2             # won't arm below ~3.8V/cell
 
 # ---- GPS + compass (Walksnail WS-M181) ----
-# u-blox M10 GPS on UART3 (SERIAL3) + QMC5883 compass on the FC I2C pads.
-# The board probes external I2C compasses (AP_COMPASS_PROBING_ENABLED in
-# the hwdef) and fixes orientation during calibration
-# (COMPASS_AUTO_ROT default 2) so no orientation params here. GPS type is
+# u-blox M10 GPS on UART3 (SERIAL3) + QMC5883L compass on the FC I2C pads.
+# No compass on the FC itself. The 743v2 hwdef lists an external QMC5883L at
+# 0x0D and orientation gets fixed during calibration (COMPASS_AUTO_ROT
+# default 2) so no orientation params here. GPS type is
 # left on AUTO (GPS_TYPE got renamed GPS1_TYPE in 4.6).
 SERIAL3_PROTOCOL,5             # GPS (already the default)
 #

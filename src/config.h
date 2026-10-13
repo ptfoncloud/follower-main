@@ -54,7 +54,7 @@
 
 // -- Serial link to the FC --------------------------------------------
 // ESP32 UART2 (GPIO16 RX, GPIO17 TX) to SERIAL1 / UART1 on the
-// MicoAir743-AIO (full UART table is at the top of follower.param).
+// MicoAir743v2 AIO (full UART table is at the top of follower.param).
 // FC_BAUD has to match SERIAL1_BAUD in follower.param (57 there = 57600).
 #define FC_SERIAL       Serial2
 #define FC_BAUD         57600
