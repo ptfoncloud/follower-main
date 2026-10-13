@@ -122,7 +122,7 @@ RNGFND1_MAX_CM,800             # 8 m
 # ---- EKF3 sources — flow-based nav (no GPS assumed for indoor flight) ----
 EK3_ENABLE,1
 EK3_SRC1_VELXY,5               # optical flow for XY velocity
-EK3_SRC1_VELZ,0                # none (default 3 = GPS; no GPS here). Per ardupilot.org optical flow setup
+EK3_SRC1_VELZ,0                # none (default 3 = GPS; no GPS fix indoors). Per ardupilot.org optical flow setup
 EK3_SRC1_POSZ,2                # rangefinder for altitude
 EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
                                 # velocity control still works fine on flow alone
@@ -151,7 +151,7 @@ ARMING_CHECK,1
 # Do not "fix" it by setting ARMING_SKIPCHK to anything but 0 here.
 
 # ---- Failsafes ----
-FS_THR_ENABLE,3                # RC loss failsafe: always LAND (not RTL - no GPS, no home to return to)
+FS_THR_ENABLE,3                # RC loss failsafe: always LAND (not RTL - no GPS fix indoors, so no home)
 FS_THR_VALUE,975               # below this PWM on throttle = failsafe
 FS_OPTIONS,0
 FS_GCS_ENABLE,0                # no GCS failsafe — companion link loss
