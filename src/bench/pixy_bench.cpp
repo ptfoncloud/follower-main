@@ -1,14 +1,14 @@
-/*  pixy_bench.cpp — Pixy2 SPI link bench test. No flight controller,
-    no MAVLink, never commands anything.
+/*  pixy_bench.cpp - pixy2 SPI bench test. No FC, no MAVLink, doesn't
+    command anything.
 
-    Build/flash:  pio run -e pixy_bench -t upload
-    Watch:        pio device monitor -e pixy_bench
+    flash:  pio run -e pixy_bench -t upload
+    watch:  pio device monitor -e pixy_bench
 
-    Wiring is the flight wiring: Pixy2 on VSPI (MISO 19, SCK 18, MOSI 23),
-    no chip-select wire — PixyMon's interface must be "Arduino ICSP SPI".
+    Same wiring as flight: pixy on VSPI (MISO 19, SCK 18, MOSI 23), no CS
+    wire, PixyMon interface set to "Arduino ICSP SPI".
 
-    Expect: an init result of 0, then a line every 200 ms. With a trained
-    signature in view you get one row per block; otherwise "0 blocks". */
+    Should print init result 0, then a line every 200 ms. With a trained
+    signature in view you get a row per block, otherwise "0 blocks". */
 
 #include <Arduino.h>
 #include <Pixy2.h>

@@ -1,8 +1,7 @@
 # ============================================================
-# FOLLOWER — MAVProxy bridge launcher (Windows)
-# Same behavior as launch_mavproxy.sh — see that file for full notes
-# on what this does and its honest limitations (USB-tethered range only
-# unless a telemetry radio or ESP32 WiFi bridge is added later).
+# follower - MAVProxy bridge (Windows)
+# Same as launch_mavproxy.sh, notes are in that file (USB tethered only
+# until there's a telemetry radio or an ESP32 wifi bridge).
 #
 # Usage:
 #   .\launch_mavproxy.ps1 sitl

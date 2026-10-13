@@ -1,21 +1,16 @@
-/*  ================================================================
-    FOLLOWER DRONE — ESP32 Companion Controller  (v3)
-    Hardware: ESP32 + Pixy2 (SPI) + MicoAir H743 AIO (UART1, MAVLink2)
+/*  follower - ESP32 companion firmware
+    ESP32 + Pixy2 (SPI) + MicoAir H743 AIO (UART1, MAVLink2)
 
-    v3: the armed/mode/link-timeout gating logic now lives in
-    safety_gate.h — a pure, hardware-independent function that's
-    ALSO compiled and tested standalone on desktop (test/native/).
-    This file calls that exact function; it does not reimplement the
-    logic inline anymore, so a passing native test is a guarantee
-    about this actual flight code, not a parallel copy of it.
+    The armed/mode/link timeout check is in safety_gate.h so it can be
+    tested on desktop (test/native/). This file calls that same
+    function instead of having its own copy.
 
-    Tracking strategy:
-      PRIMARY   — Pixy2 color blob (subject wears a colored beacon)
-      FALLBACK  — Pixy2 "line" program. OFF by default
-                  (ENABLE_LINE_FALLBACK in config.h): it tracks line
-                  features, not people. When off, PRIMARY -> LOST.
-      LOST      — hold position, emit warning
-    ================================================================ */
+    Tracking:
+      PRIMARY   pixy2 color blob (beacon)
+      FALLBACK  pixy2 "line" program, off by default (ENABLE_LINE_FALLBACK
+                in config.h) since it tracks lines not people. When off,
+                PRIMARY goes straight to LOST.
+      LOST      hold position */
 
 #include <Arduino.h>
 #include <Pixy2.h>
@@ -34,13 +29,11 @@ int      primaryMissCount = 0;
 bool     fcArmed          = false;
 uint32_t fcCustomMode     = 0;   // HEARTBEAT.custom_mode is uint32
 uint32_t lastFcHeartbeatMs = 0;
-// ARDUCOPTER_MODE_GUIDED and FC_LINK_TIMEOUT_MS now live in config.h,
-// alongside every other tunable — see the note there on why.
 
 mavlink_status_t mavStatus;
 mavlink_message_t mavMsg;
 
-// ── Outgoing helpers ─────────────────────────────────────────────
+// -- outgoing --------------------------------------------------------
 void sendBytes(uint8_t* buf, uint16_t len) { FC_SERIAL.write(buf, len); }
 
 void sendHeartbeat() {
@@ -53,16 +46,16 @@ void sendHeartbeat() {
     sendBytes(buf, len);
 }
 
-/*  Every velocity command goes through evaluate_safety_gate() first -
-    the SAME function proven by test/native/test_safety_gate.cpp. */
+// Every velocity command goes through evaluate_safety_gate() first (same
+// function test_safety_gate.cpp tests).
 void sendVelocity(float vx, float vy, float vz) {
     SafetyGateResult gate = evaluate_safety_gate(
         fcArmed, fcCustomMode, ARDUCOPTER_MODE_GUIDED,
         lastFcHeartbeatMs, millis(), FC_LINK_TIMEOUT_MS
     );
-    // Log suppression when the reason changes, and otherwise at most once
-    // per GATE_LOG_INTERVAL_MS — sendVelocity() runs every 100 ms, so
-    // logging every call buried everything else while disarmed.
+    // Only log when the reason changes, or once per GATE_LOG_INTERVAL_MS.
+    // This runs every 100 ms so logging every call drowned out everything
+    // else while disarmed.
     static const char* lastGateReason = nullptr;   // nullptr = gate was open
     static uint32_t    lastGateLogMs  = 0;
     if (!gate.should_command) {
@@ -90,13 +83,12 @@ void sendVelocity(float vx, float vy, float vz) {
     mavlink_msg_set_position_target_local_ned_pack(
         MY_SYSID, MY_COMPID, &msg,
         millis(), FC_SYSID, FC_COMPID,
-        // Velocity is rotated by current heading in BODY_NED (ArduCopter
-        // GCS_Mavlink.cpp handle_message_set_position_target_local_ned).
+        // BODY_NED: ArduCopter rotates the velocity by current heading
+        // (handle_message_set_position_target_local_ned)
         MAV_FRAME_BODY_NED,
-        // 0x0DC7 (3527): ArduPilot's documented "use velocity" mask —
-        // ignore pos, accel, yaw, yaw rate. The old 0x0FC7 also set bit 9
-        // (FORCE_SET), which ArduCopter only tolerates because accel is
-        // ignored; don't rely on that.
+        // 0x0DC7 (3527) = ArduPilot's documented velocity only mask (ignore
+        // pos, accel, yaw, yaw rate). Was 0x0FC7 which also set bit 9
+        // FORCE_SET, only worked because accel was ignored too.
         0x0DC7,
         0, 0, 0,
         vx, vy, vz,
@@ -115,7 +107,7 @@ float pxToVel(int err, int deadZone, float kP) {
     return kP * (float)(abs(err) - deadZone) * sign;
 }
 
-// ── Incoming: parse the FC's own HEARTBEAT to track armed/mode ────
+// -- incoming: FC heartbeat for armed/mode ---------------------------
 void pollFcHeartbeat() {
     while (FC_SERIAL.available()) {
         uint8_t c = FC_SERIAL.read();
@@ -139,7 +131,7 @@ void pollFcHeartbeat() {
     }
 }
 
-// ── Primary tracking: color blob ──────────────────────────────────
+// -- primary tracking: color blob ------------------------------------
 bool runPrimary(float &vx, float &vy, float &vz) {
     int n = pixy.ccc.getBlocks();
     if (n <= 0) return false;
@@ -170,7 +162,7 @@ bool runPrimary(float &vx, float &vy, float &vz) {
     return true;
 }
 
-// ── Fallback tracking: line / silhouette ──────────────────────────
+// -- fallback tracking: line (off by default) ------------------------
 bool runFallback(float &vx, float &vy, float &vz) {
     pixy.line.getMainFeatures();
     if (!(pixy.line.numVectors)) return false;
@@ -187,16 +179,16 @@ bool runFallback(float &vx, float &vy, float &vz) {
     return true;
 }
 
-// ─────────────────────────────────────────────────────────────────
+// --------------------------------------------------------------------
 void setup() {
     Serial.begin(115200);
     FC_SERIAL.begin(FC_BAUD, SERIAL_8N1, 16, 17);
     pinMode(STATUS_LED, OUTPUT);
 
     Serial.println("[FOLLOWER] Initialising Pixy2...");
-    int8_t pixyRes = pixy.init();   // waits up to ~5 s for Pixy2 to answer
+    int8_t pixyRes = pixy.init();   // waits up to ~5 s for the pixy to answer
     if (pixyRes < 0) {
-        // Not fatal: with no blocks the tracker stays LOST (= hold).
+        // not fatal, with no blocks it just stays LOST (hold)
         Serial.printf("[FOLLOWER] ERROR: Pixy2 init failed (%d, -4 = timeout). "
                       "Check SPI wiring (MISO 19, SCK 18, MOSI 23, no CS) and that "
                       "PixyMon's interface is \"Arduino ICSP SPI\". Tracking will stay LOST.\n",
@@ -213,7 +205,7 @@ void setup() {
     Serial.println("[FOLLOWER] Waiting for FC heartbeat before commanding...");
 }
 
-// ─────────────────────────────────────────────────────────────────
+// --------------------------------------------------------------------
 void loop() {
     static uint32_t lastHeartbeatMs = 0;
     static uint32_t lastCmdMs       = 0;
@@ -234,8 +226,8 @@ void loop() {
         return;
     }
     if (now - lastFcHeartbeatMs > FC_LINK_TIMEOUT_MS) {
-        // Nothing is sent while the link is stale; the FC's own guided
-        // timeout stops the vehicle. Log at most once per interval.
+        // nothing gets sent while the link is stale, the FC's guided
+        // timeout stops it. log at most once per interval
         static uint32_t lastLinkLogMs = 0;
         if (lastLinkLogMs == 0 || now - lastLinkLogMs >= GATE_LOG_INTERVAL_MS) {
             Serial.println("[FOLLOWER] FC link timeout - not commanding");
@@ -257,9 +249,9 @@ void loop() {
                 sendVelocity(vx, vy, vz);
                 digitalWrite(STATUS_LED, HIGH);
             } else {
-                // Hold on every missed frame. Sending nothing would leave
-                // the FC flying the last velocity (up to VEL_MAX_XY) until
-                // LOST, ~FALLBACK_CYCLES x 100 ms later.
+                // hold on every missed frame. sending nothing would leave the
+                // FC flying the last velocity (up to VEL_MAX_XY) until LOST
+                // kicks in ~FALLBACK_CYCLES x 100 ms later
                 sendHold();
                 primaryMissCount++;
                 if (primaryMissCount >= FALLBACK_CYCLES) {
@@ -268,7 +260,7 @@ void loop() {
                     trackMode = MODE_FALLBACK;
                     pixy.changeProg("line");
 #else
-                    // Line features aren't people (see config.h) - hold instead.
+                    // line features aren't people (see config.h), hold instead
                     Serial.println("[FOLLOWER] Primary lost -> LOST (line fallback disabled)");
                     trackMode = MODE_LOST;
 #endif
@@ -283,24 +275,17 @@ void loop() {
                 sendVelocity(vx, vy, vz);
                 digitalWrite(STATUS_LED, (now / 250) % 2);
             } else {
-                sendHold();   // same rule as PRIMARY: no target = zero velocity
+                sendHold();   // same as PRIMARY, no target = zero velocity
                 if (now - lastDetectMs > LOST_TIMEOUT_MS) {
                     Serial.println("[FOLLOWER] Fallback lost -> LOST");
                     trackMode = MODE_LOST;
                 }
             }
 
-            // Periodically check whether PRIMARY tracking has come back,
-            // rather than every single loop iteration. Pixy2's
-            // changeProg() switches its whole internal pipeline, so
-            // round-tripping line->ccc->line every 100ms (10x/second)
-            // would mean constantly interrupting the fallback tracker
-            // right after it switches back in - real overhead, no
-            // benefit, since recovery a few hundred ms later than
-            // "instant" costs nothing here. Checking every 5th cycle
-            // (roughly twice a second at this loop's 100ms cadence)
-            // is responsive enough while leaving the fallback tracker
-            // mostly undisturbed.
+            // Check if PRIMARY came back every 5th cycle (~2x a second)
+            // instead of every loop. changeProg() swaps pixy's whole
+            // pipeline, so doing line->ccc->line every 100 ms would keep
+            // interrupting the fallback tracker for no real benefit.
             static uint8_t recoveryCheckCounter = 0;
             if (++recoveryCheckCounter >= 5) {
                 recoveryCheckCounter = 0;
@@ -322,10 +307,8 @@ void loop() {
             sendHold();
             digitalWrite(STATUS_LED, (now / 100) % 2);
 
-            // Same periodic-probe reasoning as MODE_FALLBACK above -
-            // no need to hammer changeProg() every iteration while
-            // holding position; a couple of checks per second is
-            // plenty responsive for "the beacon came back."
+            // same as FALLBACK, a couple checks a second is plenty while
+            // holding
             static uint8_t lostRecoveryCounter = 0;
             if (++lostRecoveryCounter >= 5) {
                 lostRecoveryCounter = 0;

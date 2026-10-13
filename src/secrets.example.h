@@ -1,11 +1,7 @@
 #pragma once
-/*  secrets.example.h — template for src/secrets.h.
-
-    Copy this file to src/secrets.h and fill in real values. secrets.h is
-    gitignored; this example is the only one that gets committed.
-      PowerShell:  Copy-Item src\secrets.example.h src\secrets.h
-
-    Used by the thermal streaming module (esp32_thermal/README.md). */
+/*  template for src/secrets.h (gitignored, only this example is committed)
+      Copy-Item src\secrets.example.h src\secrets.h
+    then fill it in. Used by the thermal streaming (esp32_thermal/README.md). */
 
 #define WIFI_SSID            "YOUR_WIFI_SSID"
 #define WIFI_PASSWORD        "YOUR_WIFI_PASSWORD"

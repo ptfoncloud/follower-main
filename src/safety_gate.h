@@ -1,31 +1,25 @@
 #pragma once
-/*  ================================================================
-    safety_gate.h — the single most safety-relevant decision in this
-    firmware, deliberately isolated with ZERO Arduino/hardware
-    dependency so it can be compiled and unit tested on a desktop,
-    not just trusted because it "looked right" on the bench.
+/*  safety_gate.h - decides whether the ESP32 is allowed to send a
+    velocity command. No Arduino deps on purpose so it can be compiled
+    and tested on desktop.
 
-    This header is included by main.cpp for the real flight build, and
-    by test/native/test_safety_gate.cpp for the desktop test build —
-    same function, two build targets, so a passing test actually means
-    something about the real flight code.
-    ================================================================ */
+    main.cpp includes this for the flight build and
+    test/native/test_safety_gate.cpp includes it for the tests, so the
+    tests are testing the real thing. */
 
 #include <stdint.h>
 
 struct SafetyGateResult {
     bool     should_command;
-    const char* reason;   // human-readable, goes straight to Serial.printf() in flight
+    const char* reason;   // printed to serial in flight
 };
 
-/*  The FC must be armed, in the required flight mode, and its
-    heartbeat must be recent — all three, every single call. This is
-    intentionally NOT allowed to "fail open" on any single missing
-    condition. */
+/*  FC has to be armed, in the required mode, and have a recent heartbeat.
+    All three, every call. Any one missing = no command. */
 inline SafetyGateResult evaluate_safety_gate(
     bool fc_armed,
-    uint32_t fc_custom_mode,   // full HEARTBEAT.custom_mode — never truncate
-    uint32_t required_mode,    // to 8 bits: 0x104 would then read as GUIDED (4)
+    uint32_t fc_custom_mode,   // full 32 bit HEARTBEAT.custom_mode. don't truncate
+    uint32_t required_mode,    // to 8 bits or 0x104 reads as GUIDED (4)
     uint32_t last_heartbeat_ms,
     uint32_t now_ms,
     uint32_t link_timeout_ms
@@ -36,9 +30,9 @@ inline SafetyGateResult evaluate_safety_gate(
     if (fc_custom_mode != required_mode) {
         return { false, "FC not in required mode" };
     }
-    // Guards against millis() rollover (happens every ~49 days) producing
-    // a huge underflowed value that would otherwise look like a fresh
-    // heartbeat. Rare in a short flight, cheap to guard against anyway.
+    // millis() rolls over every ~49 days. Treat that as stale instead of
+    // letting it look like a fresh heartbeat. Won't happen mid flight but
+    // it's cheap to check.
     if (now_ms < last_heartbeat_ms) {
         return { false, "clock rollover — treating link as stale" };
     }

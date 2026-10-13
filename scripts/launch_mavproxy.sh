@@ -1,26 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================
-# FOLLOWER — MAVProxy bridge launcher (Linux / Henri)
+# follower - MAVProxy bridge (Linux / Henri)
 #
-# WHAT THIS ACTUALLY DOES:
-# Takes ONE MAVLink source (either real FC over USB, or SITL) and
-# fans it out to multiple UDP outputs simultaneously — your FastAPI
-# backend AND a second GCS (Mission Planner/QGC) for monitoring, at
-# the same time, from one connection.
+# Takes one MAVLink source (FC over USB or SITL) and sends it out to
+# multiple UDP ports at once, the FastAPI backend and a second GCS
+# (Mission Planner/QGC) for watching.
 #
-# HONEST LIMITATION: the "FC over USB" mode below assumes the drone
-# is physically tethered to this machine via USB cable (bench testing,
-# or a very short-range test hop). For real wireless range outdoors,
-# you need a telemetry radio pair (e.g. SiK radio, RFD900) — that's
-# not currently in your BOM. Without one, real outdoor flights rely on
-# the ELRS link for control (via the RX/RC path) but won't stream
-# telemetry back to this laptop/Henri unless you build a WiFi bridge
-# on the ESP32 (a real option later, not built yet — see notes at the
-# bottom of this file).
+# usb mode means the drone is plugged into this machine with a cable
+# (bench testing or a really short hop). For actual wireless range you'd
+# need a telemetry radio pair (SiK, RFD900), not in the BOM yet. Without
+# one, flights are controlled over ELRS but no telemetry comes back here
+# unless a wifi bridge gets built on the ESP32 (see the bottom of this
+# file).
 #
 # Usage:
-#   ./launch_mavproxy.sh sitl     — bridge SITL for backend testing
-#   ./launch_mavproxy.sh usb      — bridge real FC over USB (bench/tethered)
+#   ./launch_mavproxy.sh sitl     bridge SITL for backend testing
+#   ./launch_mavproxy.sh usb      bridge the real FC over USB
 # ============================================================
 
 set -e
@@ -28,8 +23,8 @@ set -e
 MODE="${1:-sitl}"
 
 GCS_BACKEND_PORT=14550    # matches the FastAPI backend's udpin:127.0.0.1:14550
-MONITOR_PORT=14551        # point Mission Planner/QGC here as a UDP client, for
-                           # a second pair of eyes during test flights
+MONITOR_PORT=14551        # point Mission Planner/QGC here as a UDP client to
+                           # watch during test flights
 
 if [ "$MODE" == "sitl" ]; then
     echo "[launch_mavproxy] Bridging SITL -> backend:$GCS_BACKEND_PORT + monitor:$MONITOR_PORT"
@@ -42,8 +37,8 @@ if [ "$MODE" == "sitl" ]; then
         --daemon
 
 elif [ "$MODE" == "usb" ]; then
-    # CHANGE THIS to your actual FC's USB serial device.
-    # Find it with: ls /dev/serial/by-id/   (Linux)
+    # change to the FC's actual USB serial device
+    # find it with: ls /dev/serial/by-id/
     FC_PORT="/dev/ttyACM0"
     FC_BAUD=115200
 
@@ -62,11 +57,9 @@ fi
 echo "[launch_mavproxy] Backend should now be receiving telemetry on :${GCS_BACKEND_PORT}"
 echo "[launch_mavproxy] Point Mission Planner/QGC at UDP :${MONITOR_PORT} to watch in parallel"
 
-# ---- Future option, not built yet ----
-# If you want true wireless outdoor telemetry without a dedicated radio,
-# the ESP32 (already on the airframe, already talking MAVLink to the FC
-# on UART1) could ALSO run a WiFi UDP relay — forwarding everything it
-# sees on UART1 out over WiFi to this machine. That's a real, buildable
-# addition to the ESP32 firmware, but it competes for the ESP32's CPU/
-# radio time with the Pixy2 tracking loop, so it needs its own testing
-# pass before trusting it in flight. Ask if you want this built.
+# ---- not built yet ----
+# For wireless telemetry without a radio, the ESP32 (already on UART1
+# talking MAVLink to the FC) could also relay everything it sees on UART1
+# over wifi to this machine. Doable, but it competes with the pixy2
+# tracking loop for the ESP32's CPU and radio so it needs its own testing
+# before it flies.

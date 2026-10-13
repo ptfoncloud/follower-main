@@ -1,12 +1,13 @@
-/*  Desktop tests for esp32_thermal/thermal_wire.h — same plain-assert
-    style as test_safety_gate.cpp:
+/*  Desktop tests for esp32_thermal/thermal_wire.h, same style as
+    test_safety_gate.cpp:
 
       g++ -std=c++17 -Wall -Wextra -Werror -o test_thermal_wire test/native/test_thermal_wire.cpp
       ./test_thermal_wire
 
-    `./test_thermal_wire --golden out.bin` also writes the encoded golden
-    frame below; follower-server's tests/data/golden_frame_776.bin is that
-    file, so the Python decoder is tested against real C++ encoder output. */
+    `./test_thermal_wire --golden out.bin` also writes the golden frame
+    below. follower-server's tests/data/golden_frame_776.bin is that file,
+    so the python decoder gets tested against real output from this
+    encoder. */
 
 #include <cmath>
 #include <cstdio>
@@ -22,8 +23,8 @@ int tests_run = 0;
     } \
 } while (0)
 
-// Golden frame: gradient 20..~34.7 C, a 33.5 C "person" at rows 10-13,
-// cols 14-17, and pixel 0 = NaN. Python rebuilds the same in float32.
+// golden frame: gradient 20..~34.7 C, a 33.5 C "person" at rows 10-13
+// cols 14-17, pixel 0 = NaN. the python test builds the same thing in float32
 static void golden_frame(float* f) {
     for (int i = 0; i < THERMAL_WIRE_PIXELS; i++) {
         int row = i / 32, col = i % 32;
@@ -54,8 +55,8 @@ int main(int argc, char** argv) {
     float lo, scale;
     memcpy(&lo, buf, 4);
     memcpy(&scale, buf + 4, 4);
-    // Pixel 0 (row 0, col 0) is NaN and must be skipped, so the minimum is
-    // row 1, col 0 = 20.1, not 20.0.
+    // pixel 0 is NaN and has to be skipped, so min is row 1 col 0 = 20.1
+    // not 20.0
     CHECK(fabsf(lo - 20.1f) < 1e-4f);
     CHECK(scale > 0.0f);
     float worst = 0.0f;
