@@ -29,13 +29,21 @@ SERIAL1_PROTOCOL,2
 SERIAL1_BAUD,57
 
 # ---- SERIAL4 (UART4) — MTF-01 optical flow + rangefinder ----
-# MTF-01 speaks MAVLink (OPTICAL_FLOW + DISTANCE_SENSOR messages).
-# Baud below is MicoAir's commonly-published default for this sensor —
-# VERIFY against your MTF-01 unit before first flight. If it doesn't
-# link, check the MTF-01 manual/MicoAir's own setup doc for the exact
-# baud they ship it configured at.
-SERIAL4_PROTOCOL,2
-SERIAL4_BAUD,115
+# Per ardupilot.org/copter/docs/common-mtf-01.html. The sensor itself
+# must first be set to output "mav_apm" with mav_id 200 — see
+# docs/MTF01_SETUP.md. Without mav_id != 1, ArduPilot 4.5+ may not
+# recognise it.
+#
+# TARGET VERSION: ArduCopter 4.6.x. Firmware version was not confirmed
+# when this file was written — check Mission Planner before loading.
+SERIAL4_PROTOCOL,1             # MAVLink1 (what the MTF-01 speaks), not 2
+SERIAL4_BAUD,115               # 115200
+SERIAL4_OPTIONS,1024           # bit 10: don't forward MAVLink to/from this port (4.6 and earlier)
+# ArduCopter 4.7+: bit 10 above moved to MAVx_OPTIONS, where x counts
+# MAVLink-protocol serial ports, not SERIALx numbers. With SERIAL0 (USB),
+# SERIAL1 (ESP32) and SERIAL4 on MAVLink, SERIAL4 is most likely MAV3.
+# Reboot after setting SERIAL4_PROTOCOL, then confirm which MAVx it is.
+# MAV3_OPTIONS,2               # 4.7+ only: don't forward MAVLink to/from
 
 # ---- SERIAL5 (UART6) — ELRS RX ----
 # Already RCIN by default on this board. CRSF auto-detected. No protocol
@@ -77,13 +85,24 @@ EK3_SRC1_YAW,0                 # gyro-only yaw source, expect drift
 
 # ---- Optical flow / rangefinder (MTF-01) ----
 FLOW_ENABLE,1
-FLOW_TYPE,6                    # MAVLink
-FLOW_POS_X,0.0                 # SET THIS: measure real offset from CG once mounted
-FLOW_POS_Y,0.0                 # SET THIS
-FLOW_POS_Z,0.0                 # SET THIS
+FLOW_TYPE,5                    # MAVLink (6 is DroneCAN — wrong for a UART sensor)
+# FLOW_ORIENT_YAW: ArduPilot's default MTF-01 orientation is rotated 180
+# degrees from the INAV/FMT one. If mounted the INAV/FMT way, set
+# FLOW_ORIENT_YAW,18000. A wrong value inverts flow feedback and can cause
+# a flyaway — check flow against attitude before flying (MTF01_SETUP.md).
+# TODO(CG measurement): FLOW_POS_X/Y/Z are the sensor's offset from the
+# centre of gravity in metres (X forward, Y right, Z down). 0.0 is a
+# placeholder, NOT a measured value. Measure once the airframe is built.
+FLOW_POS_X,0.0                 # TODO: measure
+FLOW_POS_Y,0.0                 # TODO: measure
+FLOW_POS_Z,0.0                 # TODO: measure
 RNGFND1_TYPE,10                # MAVLink rangefinder
-RNGFND1_MIN_CM,5
-RNGFND1_MAX_CM,800             # MTF-01 real max range per datasheet
+RNGFND1_ORIENT,25              # Down
+RNGFND1_MIN_CM,1               # 4.6 and earlier: centimetres
+RNGFND1_MAX_CM,800             # 8 m
+# ArduCopter 4.7+ renamed these to metres:
+# RNGFND1_MIN,0.01
+# RNGFND1_MAX,8
 
 # ---- EKF3 sources — flow-based nav (no GPS assumed for indoor flight) ----
 EK3_ENABLE,1
