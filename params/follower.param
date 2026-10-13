@@ -74,7 +74,7 @@ BATT_AMP_PERVLT,14.14
 # conservative starting points, not final.
 BATT_LOW_VOLT,14.4             # ~3.6V/cell — land soon
 BATT_CRT_VOLT,13.6             # ~3.4V/cell — land NOW
-BATT_FS_LOW_ACT,2              # RTL on low battery
+BATT_FS_LOW_ACT,1              # LAND on low battery (RTL needs a position fix; none indoors without GPS)
 BATT_FS_CRT_ACT,1              # LAND immediately on critical battery
 BATT_ARM_VOLT,15.2             # refuse to arm below ~3.8V/cell
 
@@ -143,7 +143,7 @@ ARMING_CHECK,1
 # Do not "fix" it by setting ARMING_SKIPCHK to anything but 0 here.
 
 # ---- Failsafes ----
-FS_THR_ENABLE,1                # RC loss failsafe ON
+FS_THR_ENABLE,3                # RC loss failsafe: always LAND (not RTL - no GPS, no home to return to)
 FS_THR_VALUE,975               # below this PWM on throttle = failsafe
 FS_OPTIONS,0
 FS_GCS_ENABLE,0                # no GCS failsafe — companion link loss
