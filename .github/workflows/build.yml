@@ -23,8 +23,8 @@ jobs:
           key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
       - name: Install PlatformIO
         run: pip install --upgrade platformio
-      - name: Build ESP32 firmware
-        run: pio run -e esp32dev
+      - name: Build ESP32 firmware and Pixy2 bench test
+        run: pio run -e esp32dev -e pixy_bench
 
   safety-gate-tests:
     runs-on: ubuntu-latest
