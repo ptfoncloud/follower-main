@@ -8,7 +8,7 @@
 #   SERIAL0 -> USB
 #   SERIAL1 -> UART1  (MAVLink2 by default)  --> ESP32 companion link
 #   SERIAL2 -> UART2  (DisplayPort by default) --> unused, no VTX in this build
-#   SERIAL3 -> UART3  (GPS by default)        --> for when GPS is added
+#   SERIAL3 -> UART3  (GPS by default)        --> Walksnail WS-M181 GPS (its QMC5883 compass goes on the FC I2C pads)
 #   SERIAL4 -> UART4  (MAVLink2 by default)   --> MTF-01 optical flow/rangefinder
 #   SERIAL5 -> UART6  (RCIN by default)       --> ELRS RX (CRSF, needs TX6+RX6 both wired)
 #   SERIAL6 -> UART7  (RX-only, ESC telemetry)
@@ -78,17 +78,25 @@ BATT_FS_LOW_ACT,1              # LAND on low battery (RTL needs a position fix; 
 BATT_FS_CRT_ACT,1              # LAND immediately on critical battery
 BATT_ARM_VOLT,15.2             # refuse to arm below ~3.8V/cell
 
-# ---- Compass ----
-# NO EXTERNAL COMPASS in this build (confirmed: MicoAir743-AIO has no
-# built-in compass, and none is in the BOM). Disabling compass fusion
-# entirely rather than leaving it half-configured with no sensor.
-# REAL CONSEQUENCE: yaw comes from gyro integration only and WILL drift
-# over time — fine for short test hops, not for long autonomous missions.
-# If you add an external I2C compass later, set COMPASS_ENABLE back to
-# 1 and run the compass calibration wizard in Mission Planner.
-COMPASS_ENABLE,0               # (was COMPASS_ENABLED, which does not exist)
-COMPASS_USE,0
-EK3_SRC1_YAW,0                 # gyro-only yaw source, expect drift
+# ---- GPS + compass (Walksnail WS-M181) ----
+# The WS-M181 is a u-blox M10 GPS (UART) with a built-in QMC5883 compass
+# (I2C). GPS TX/RX -> FC UART3 (SERIAL3); compass SDA/SCL -> FC I2C pads.
+# This board probes external I2C compasses (HAL_PROBE_EXTERNAL_I2C_COMPASSES
+# in its hwdef) and auto-fixes orientation on calibration
+# (COMPASS_AUTO_ROT default 2), so no orientation params are set here.
+# GPS type stays at its AUTO default (GPS_TYPE was renamed GPS1_TYPE in 4.6).
+SERIAL3_PROTOCOL,5             # GPS (already the board default; explicit)
+#
+# Compass = EKF yaw source, as in ArduPilot's optical-flow setup docs.
+# This replaces gyro-only yaw (which drifts). MUST before flight:
+#   - Mount the GPS/compass away from the ESC, battery leads and motors.
+#   - Run Mission Planner compass calibration; the FC refuses to arm
+#     until it's done (ARMING_CHECK keeps the compass check on).
+#   - Indoors, check the heading in the actual flying room: steel, rebar
+#     and wiring distort it. Bad heading = flow position control drifts.
+COMPASS_ENABLE,1
+COMPASS_USE,1
+EK3_SRC1_YAW,1                 # Compass
 
 # ---- Optical flow / rangefinder (MTF-01) ----
 # (FLOW_ENABLE removed: no such parameter. FLOW_TYPE != 0 enables flow.)
@@ -101,7 +109,7 @@ FLOW_TYPE,5                    # MAVLink (6 is DroneCAN — wrong for a UART sen
 # centre of gravity in metres (X forward, Y right, Z down). 0.0 is a
 # placeholder, NOT a measured value. Measure once the airframe is built.
 FLOW_POS_X,0.0                 # TODO: measure
-FLOW_POS_Y,0.0                 # TODO: measure
+FLOW_POS_Y,0.0                 # TODO: measure (BOM: lens at y = -9 mm from frame centre -> about -0.009 once CG is confirmed)
 FLOW_POS_Z,0.0                 # TODO: measure
 RNGFND1_TYPE,10                # MAVLink rangefinder
 RNGFND1_ORIENT,25              # Down
@@ -126,11 +134,11 @@ EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
 # earlier draft of this file invented one that doesn't exist in real
 # ArduPilot and would have silently done nothing on load.
 #
-# Left at 1 (all checks, including compass and GPS) deliberately. With
-# no compass or GPS fitted, this means the FC will correctly REFUSE TO
-# ARM until you either add those sensors, or go into Mission Planner's
-# Setup -> Mandatory Hardware -> Arming Checks screen and manually
-# UNCHECK just "Compass" and "GPS Lock" there. Doing it through that
+# Left at 1 (all checks) deliberately. The compass check stays ON (the
+# WS-M181 compass is used for yaw). Indoors there is no GPS fix, so the
+# FC will REFUSE TO ARM until you go into Mission Planner's Setup ->
+# Mandatory Hardware -> Arming Checks screen and manually UNCHECK just
+# "GPS Lock" there. Doing it through that
 # GUI is deliberate: it shows you exactly which checks are on/off with
 # no bitmask arithmetic to get wrong, which matters here because
 # getting a hand-computed bitmask wrong risks silently disabling MORE
@@ -152,3 +160,28 @@ FS_GCS_ENABLE,0                # no GCS failsafe — companion link loss
 
 # ---- GUIDED mode (used by the ESP32 follower velocity commands) ----
 GUID_OPTIONS,0
+
+# ---- RC switches: SET THESE BEFORE FLYING (commented out on purpose) ----
+# The LiteRadio 3's switch-to-channel mapping isn't documented, so the
+# channel numbers below are placeholders. Find them in Mission Planner:
+# Setup -> Mandatory Hardware -> Radio Calibration, flip each switch and
+# note which channel moves (and whether it has 2 or 3 positions).
+# Do NOT use channels 1-4 (sticks). ELRS uses channel 5 as its arm/AUX1
+# channel; keep the e-stop on a 2-position switch.
+#
+# Flight-mode switch (3-position; ArduCopter reads PWM bands, a 3-pos
+# switch lands on FLTMODE1 / FLTMODE4 / FLTMODE6):
+# FLTMODE_CH,<3-pos channel>
+# FLTMODE1,2      # switch low  = ALT_HOLD  (take off / manual)
+# FLTMODE2,2
+# FLTMODE3,2
+# FLTMODE4,5      # switch mid  = LOITER    (hold position: the abort)
+# FLTMODE5,5
+# FLTMODE6,4      # switch high = GUIDED    (follower active)
+#
+# Emergency motor stop (2-position). Motors stop instantly; the drone
+# falls. Last resort only:
+# RC<ch>_OPTION,31   # Motor Emergency Stop
+#
+# Arming stays on the sticks (throttle down + yaw right, ARMING_RUDDER
+# default) or the console button. No gesture can arm or disarm.
