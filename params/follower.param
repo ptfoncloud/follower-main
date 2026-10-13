@@ -107,6 +107,7 @@ RNGFND1_MAX_CM,800             # 8 m
 # ---- EKF3 sources — flow-based nav (no GPS assumed for indoor flight) ----
 EK3_ENABLE,1
 EK3_SRC1_VELXY,5               # optical flow for XY velocity
+EK3_SRC1_VELZ,0                # none (default 3 = GPS; no GPS here). Per ardupilot.org optical flow setup
 EK3_SRC1_POSZ,2                # rangefinder for altitude
 EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
                                 # velocity control still works fine on flow alone
