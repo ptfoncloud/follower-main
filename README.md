@@ -47,7 +47,7 @@ g++ -std=c++17 -Wall -Wextra -Werror -o test_safety_gate test/native/test_safety
 # thermal wire format (esp32_thermal/thermal_wire.h)
 g++ -std=c++17 -Wall -Wextra -Werror -o test_thermal_wire test/native/test_thermal_wire.cpp
 ./test_thermal_wire
-# ALL 17 CHECKS PASSED
+# ALL 15 CHECKS PASSED  (17 with --golden <file>)
 ```
 
 The tests include `src/config.h`, so they check the real
