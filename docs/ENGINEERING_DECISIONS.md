@@ -44,17 +44,19 @@ silently failed, an optimistic UI would show ARMED while the vehicle
 sits disarmed, which is a worse failure mode than a half-second of
 perceived lag.
 
-## Gyro-only yaw, no compass — a real limitation, not a hidden one
+## Compass yaw from the GPS module, GPS not used indoors
 
-The MicoAir743-AIO has no built-in compass and none is in this build's
-BOM. Rather than leave `COMPASS_ENABLE` half-configured with no sensor
-behind it, it's explicitly disabled and yaw comes from gyro integration
-alone, documented plainly in `follower.param`'s comments. **The actual
-cost:** yaw drifts over time with no absolute reference to correct it —
-acceptable for short test flights, a real problem for anything long or
-requiring precise heading. The fix (an external I2C compass) is a
-known, scoped addition, not a redesign — deliberately deferred rather
-than solved with a worse workaround now.
+The MicoAir743-AIO has no built-in compass. The Walksnail WS-M181 GPS
+in the BOM carries a QMC5883 compass on I2C, so that compass is the
+EKF's yaw source (`EK3_SRC1_YAW,1`), as in ArduPilot's own optical-flow
+setup. Earlier drafts ran gyro-only yaw, which drifts with no absolute
+reference. Horizontal position and velocity still come from the MTF-01
+(`EK3_SRC1_POSXY,0`, `VELXY,5`); the GPS is wired on SERIAL3 but has no
+fix indoors and isn't an EKF source. **The cost:** indoor magnetic
+distortion (steel, rebar, wiring) can bend the heading, which makes flow
+position control drift. Check the heading in the actual room before
+flying (`FIRST_FLIGHT.md` §4). Outdoor GPS navigation would need a
+second EKF source set; not configured.
 
 ## UDP for thermal frames, not TCP
 

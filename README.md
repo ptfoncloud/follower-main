@@ -29,6 +29,8 @@ the thermal-tracking service that runs on Henri lives in
 | Thermal (secondary tracking) | Adafruit MLX90640, 55° FOV |
 | RC receiver | RadioMaster RP1 (ExpressLRS, CRSF) |
 | RC transmitter | BetaFPV LiteRadio 3 |
+| GPS + compass | Walksnail WS-M181 (M10 GPS on SERIAL3, QMC5883 compass on I2C; compass used for yaw) |
+| Companion power | Pololu 5V 3A step-down (ESP32 + Pixy2), separate from the FC's 5V |
 | Firmware | ArduCopter 4.6.x (param file target; confirm in Mission Planner) |
 
 ## The one thing worth understanding before anything else
@@ -81,6 +83,7 @@ sync with the real flight code.
 │   └── launch_mavproxy.ps1
 ├── docs/
 │   ├── OPERATIONS.md            # preflight checklist, abort procedure
+│   ├── FIRST_FLIGHT.md          # wiring, setup, bench tests, go/no-go
 │   ├── MTF01_SETUP.md           # MTF-01 sensor + FC setup, bench check
 │   ├── ENGINEERING_DECISIONS.md # why, not just what
 │   ├── beacon_training.md       # Pixy2 signature training walkthrough
@@ -102,7 +105,9 @@ sync with the real flight code.
    --target upload`. There's deliberately no `upload_port`: COM3 is the
    flight controller. Add `--upload-port COMx` if auto-detect picks
    the wrong board.
-4. **Read `docs/OPERATIONS.md`** — the actual preflight checklist and
+4. **Follow `docs/FIRST_FLIGHT.md`** — wiring table (it replaces the
+   BOM's soldering sheet), FC setup, bench tests, go/no-go. Then **read
+   `docs/OPERATIONS.md`** — the actual preflight checklist and
    abort procedure, not just code comments.
 5. Bench test props-off, then fly.
 
@@ -113,9 +118,10 @@ sync with the real flight code.
   Wireless range needs a telemetry radio or a WiFi relay on the ESP32
   (not built — would compete with Pixy2/thermal streaming for the same
   chip, needs its own bench-tested timing pass first).
-- No compass — see `docs/ENGINEERING_DECISIONS.md` for the real
-  consequence (yaw drift) and why it's disabled rather than
-  half-configured.
+- Indoor heading comes from the WS-M181's compass, which indoor steel
+  and wiring can distort; check it in the flying room
+  (`docs/ENGINEERING_DECISIONS.md`). The GPS isn't used for navigation
+  indoors, and there is no RTL on this build.
 - Gesture control via Leap Motion lives in gcs-ground-control (browser
   LeapJS → backend classifier → same command path as the dashboard).
   No gesture maps to ARM or DISARM — arm/disarm is the transmitter

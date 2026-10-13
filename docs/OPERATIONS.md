@@ -37,8 +37,8 @@ habit that catches most of what actually goes wrong.
 ## Normal operation
 
 - The ESP32 sends velocity commands only while the FC reports **armed
-  AND in GUIDED**. Switching to any other mode (LOITER, STABILIZE,
-  RTL) from your transmitter immediately and silently stops the
+  AND in GUIDED**. Switching to any other mode (LOITER, ALT_HOLD,
+  STABILIZE, LAND) from your transmitter immediately and silently stops the
   follower logic — the FC keeps flying whatever you told it to, the
   ESP32 just stops adding its own input on top. This is the actual
   override mechanism. No separate "disable follower" switch exists
@@ -70,28 +70,34 @@ Two independent link-loss paths, handled differently:
   itself detects this via `FC_LINK_TIMEOUT_MS` (3 seconds of no FC
   heartbeat) and stops sending velocity commands — verified directly
   by `test/native/test_safety_gate.cpp`. The FC, hearing nothing
-  further from the companion computer, just continues under manual RC
-  control or its own current mode — it does not fail safe *because*
-  the companion went quiet, since GUIDED-mode velocity targets
-  naturally stop being refreshed and the FC's own timeout behavior on
-  stale guided targets takes over (verify this on your specific
-  ArduPilot version/params — `GUID_OPTIONS` and stale-target handling
-  can vary by firmware version).
+  further from the companion computer, stays in GUIDED and **stops
+  after 3 s** without a fresh velocity target (ArduPilot guided-mode
+  docs). It does not trigger a failsafe (`FS_GCS_ENABLE,0`); switch mode
+  on the transmitter to take over. Bench-test this before flying
+  (REVIEW.md, hardware test "Link-loss stop").
+- **No RTL on this build.** Indoors the GPS has no fix, so there is no
+  home position, so ArduCopter refuses RTL — and if it ever engaged it
+  would climb to `RTL_ALT` (default 15 m) first. Every failsafe in
+  `follower.param` LANDs instead, and gestures use LAND too.
 
 ## Abort procedure
 
 At any point, in order of preference:
 
-1. **Switch flight mode** on the transmitter (to LOITER, STABILIZE, or
-   RTL). This is the fastest, most reliable override — it stops the
-   ESP32's velocity commands from having any effect within one
-   heartbeat cycle (well under a second) regardless of what the
-   tracking state machine thinks it's doing.
-2. **Disarm** if altitude and situation allow — the ESP32's gate
-   refuses to command an unarmed vehicle by construction, so this is
-   an unambiguous stop.
-3. **RTL** if you want the vehicle to come home rather than just hold
-   or land immediately.
+1. **Switch flight mode** on the transmitter, out of GUIDED (to
+   LOITER or ALT_HOLD to hold, STABILIZE for full manual). This is the
+   fastest, most reliable override — the ESP32's velocity commands stop
+   having any effect within one heartbeat (well under a second),
+   whatever the tracking state machine thinks it's doing.
+2. **LAND** (mode switch position or console) to bring it straight down.
+3. **Disarm once landed.** Disarming in the air (e.g. the console's
+   disarm button) stops the motors immediately and the drone falls —
+   ArduPilot does not block it. Reserve that for a real emergency
+   (vehicle out of control near people); a transmitter emergency-stop
+   switch (`RCx_OPTION,31` MotorEStop, see `docs/FIRST_FLIGHT.md`) is the
+   deliberate way to do it.
+
+Do not use RTL: there is no home position on this build (see above).
 
 There is deliberately no separate "kill the ESP32" procedure as a
 primary abort path — the transmitter mode switch is faster and doesn't
