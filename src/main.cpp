@@ -234,7 +234,13 @@ void loop() {
         return;
     }
     if (now - lastFcHeartbeatMs > FC_LINK_TIMEOUT_MS) {
-        Serial.println("[FOLLOWER] FC link timeout — holding");
+        // Nothing is sent while the link is stale; the FC's own guided
+        // timeout stops the vehicle. Log at most once per interval.
+        static uint32_t lastLinkLogMs = 0;
+        if (lastLinkLogMs == 0 || now - lastLinkLogMs >= GATE_LOG_INTERVAL_MS) {
+            Serial.println("[FOLLOWER] FC link timeout - not commanding");
+            lastLinkLogMs = now;
+        }
         digitalWrite(STATUS_LED, (now / 100) % 2);
         return;
     }
