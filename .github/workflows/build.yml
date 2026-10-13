@@ -34,3 +34,7 @@ jobs:
         run: g++ -std=c++17 -Wall -Wextra -Werror -o test_safety_gate test/native/test_safety_gate.cpp
       - name: Run safety_gate tests
         run: ./test_safety_gate
+      - name: Compile thermal wire-format tests
+        run: g++ -std=c++17 -Wall -Wextra -Werror -o test_thermal_wire test/native/test_thermal_wire.cpp
+      - name: Run thermal wire-format tests
+        run: ./test_thermal_wire

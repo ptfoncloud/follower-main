@@ -14,3 +14,4 @@ Thumbs.db
 platformio_local.ini
 .env
 test/native/test_safety_gate
+test/native/test_thermal_wire

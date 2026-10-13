@@ -62,7 +62,8 @@ sync with the real flight code.
 ├── params/
 │   └── follower.param     # full ArduCopter parameter set
 ├── esp32_thermal/
-│   └── thermal_stream.h   # MLX90640 -> WiFi UDP -> follower-server
+│   ├── thermal_stream.h   # MLX90640 -> WiFi UDP -> follower-server
+│   └── thermal_wire.h     # 776-byte quantized frame format (tested)
 ├── scripts/
 │   ├── launch_mavproxy.sh
 │   └── launch_mavproxy.ps1

@@ -58,13 +58,19 @@ than solved with a worse workaround now.
 
 ## UDP for thermal frames, not TCP
 
-The ESP32 streams raw MLX90640 frames to the Follower Server over UDP,
+The ESP32 streams MLX90640 frames to the Follower Server over UDP,
 with no retry or acknowledgment. For a live tracking feed, a frame
 that arrives late is worse than a frame that never arrives — TCP's
 retry-and-redeliver behavior would mean processing stale thermal data
 believing it's current. UDP's drop-and-move-on behavior matches the
 actual requirement: latest frame or nothing, never a queued-up stale
 one.
+
+That only works if a frame is one datagram. Raw float32 frames are
+3072 bytes and arduino-esp32's WiFiUDP splits anything over 1460, so
+each frame is quantized to 8 bits with a min/scale header: 776 bytes,
+worst-case error half a quantization step (about 0.03 °C). Format:
+`esp32_thermal/README.md`.
 
 ## Boresight error computed as real degrees, not raw pixel offset
 
