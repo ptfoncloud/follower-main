@@ -15,3 +15,6 @@ platformio_local.ini
 .env
 test/native/test_safety_gate
 test/native/test_thermal_wire
+
+# WiFi credentials - copy src/secrets.example.h to src/secrets.h
+src/secrets.h
