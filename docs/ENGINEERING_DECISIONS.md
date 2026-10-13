@@ -1,98 +1,84 @@
-# Engineering Decisions
+# Engineering decisions
 
-Short, honest record of the real tradeoffs behind this design — the
-kind of thing worth being able to explain out loud, not just having
-work.
+Why things are built the way they are, and what each choice costs.
 
-## Velocity control, not position control, for the follower logic
+## Velocity commands, not position targets
 
-The ESP32 sends `SET_POSITION_TARGET_LOCAL_NED` with a velocity-only
-type mask, not a position target. A position target would require the
-ESP32 to maintain an accurate running estimate of the vehicle's
-position relative to the subject — extra state, extra places for drift
-to accumulate silently. Velocity control instead just asks "which way
-and how fast, right now" every 100ms based on the current camera frame,
-recomputed fresh each cycle. Errors don't accumulate because nothing is
-integrated locally — the FC's own EKF owns position and velocity state,
-which is exactly the estimator that's actually tuned and validated for
-that job, so we're not duplicating it worse.
+The ESP32 sends `SET_POSITION_TARGET_LOCAL_NED` with a velocity only
+type mask (0x0DC7). A position target would mean the ESP32 has to keep
+its own estimate of where the drone is relative to the person, which is
+more state and more places for drift to build up. With velocity it just
+says which way and how fast based on the current frame, every 100 ms,
+and nothing gets integrated on the ESP32. The FC's EKF owns position
+and velocity, it's the estimator that's actually tuned for that.
 
-**Tradeoff:** velocity control alone can't specify a precise final
-position ("orbit exactly here"). Fine for a follow-me use case, would
-need rethinking for a station-keeping mission.
+Cost: you can't ask for an exact final position ("hover right here").
+Fine for following, would need rethinking for station keeping.
 
-## Dwell + cooldown gating instead of frame-by-frame reaction
+## Hold on a missed frame
 
-Every discrete state transition in the tracking logic (and the planned
-gesture classifier) requires a pose or condition to be sustained for a
-minimum time, and enforces a minimum gap before the same event can fire
-again. The obvious alternative — react instantly to every frame — is
-strictly more responsive and strictly worse in practice: a single noisy
-frame (motion blur, brief occlusion, a stray color match) becomes a
-real command instead of getting filtered out. Trading a few hundred
-milliseconds of latency for immunity to single-frame noise is the right
-trade for anything that turns into an actual flight command.
+If a frame comes back with no beacon the ESP32 sends zero velocity
+immediately instead of sending nothing. Sending nothing would leave
+the FC flying the last command (up to 1.5 m/s) for about a second until
+LOST kicks in. The downside is some stop/start if the beacon flickers
+at the edge of detection, the fix for that is a better trained
+signature not removing the hold.
 
-## Server-authoritative state, never optimistic UI updates
+## Dwell + cooldown instead of reacting to every frame
 
-The dashboard's arm/disarm buttons don't flip their own display the
-instant you click — they wait for the FC's own HEARTBEAT to confirm the
-state actually changed. The tempting alternative (update the UI
-immediately, assume the command worked) makes the interface feel
-snappier and is wrong exactly when it matters most: if the command
-silently failed, an optimistic UI would show ARMED while the vehicle
-sits disarmed, which is a worse failure mode than a half-second of
-perceived lag.
+Discrete events (the tracker state changes and the gesture classifier
+in the GCS) need a pose or condition held for a minimum time, then a
+cooldown before anything else can fire. Reacting to every frame is
+faster but one bad frame (motion blur, occlusion, a random color
+match) turns into a real command. A few hundred ms of latency is worth
+it for anything that ends up as a flight command.
 
-## Compass yaw from the GPS module, GPS not used indoors
+## The UI waits for the FC
 
-The MicoAir743-AIO has no built-in compass. The Walksnail WS-M181 GPS
-in the BOM carries a QMC5883 compass on I2C, so that compass is the
-EKF's yaw source (`EK3_SRC1_YAW,1`), as in ArduPilot's own optical-flow
-setup. Earlier drafts ran gyro-only yaw, which drifts with no absolute
-reference. Horizontal position and velocity still come from the MTF-01
-(`EK3_SRC1_POSXY,0`, `VELXY,5`); the GPS is wired on SERIAL3 but has no
-fix indoors and isn't an EKF source. **The cost:** indoor magnetic
-distortion (steel, rebar, wiring) can bend the heading, which makes flow
-position control drift. Check the heading in the actual room before
-flying (`FIRST_FLIGHT.md` §4). Outdoor GPS navigation would need a
-second EKF source set; not configured.
+The dashboard's arm/disarm buttons don't flip the display when you
+click, they wait for the FC's heartbeat to show the change. Updating
+right away feels snappier but if the command silently failed it would
+show ARMED while the drone sits disarmed, which is way worse than half
+a second of lag.
 
-## UDP for thermal frames, not TCP
+## Compass yaw from the GPS module, no GPS nav indoors
 
-The ESP32 streams MLX90640 frames to the Follower Server over UDP,
-with no retry or acknowledgment. For a live tracking feed, a frame
-that arrives late is worse than a frame that never arrives — TCP's
-retry-and-redeliver behavior would mean processing stale thermal data
-believing it's current. UDP's drop-and-move-on behavior matches the
-actual requirement: latest frame or nothing, never a queued-up stale
-one.
+The MicoAir743-AIO has no compass. The Walksnail WS-M181 has a QMC5883
+on I2C, so that's the EKF yaw source (`EK3_SRC1_YAW,1`), same as
+ArduPilot's optical flow setup. Before that it was gyro only yaw, which
+drifts. Position and velocity still come from the MTF-01
+(`EK3_SRC1_POSXY,0`, `VELXY,5`). The GPS is wired to SERIAL3 but has no
+fix indoors and isn't used by the EKF.
 
-That only works if a frame is one datagram. Raw float32 frames are
-3072 bytes and arduino-esp32's WiFiUDP splits anything over 1460, so
-each frame is quantized to 8 bits with a min/scale header: 776 bytes,
-worst-case error half a quantization step (about 0.03 °C). Format:
-`esp32_thermal/README.md`.
+Cost: steel, rebar and wiring indoors can bend the heading, and a bad
+heading makes flow position hold drift. Check it in the actual room
+(`FIRST_FLIGHT.md` section 4). Outdoor GPS nav would need a second EKF
+source set, not set up.
 
-## Boresight error computed as real degrees, not raw pixel offset
+## UDP for thermal frames
 
-`compute_boresight_error()` converts a blob's pixel position into an
-actual angular offset using the MLX90640's confirmed 55° field of view,
-rather than just returning "blob is 6 pixels right of center." A raw
-pixel offset is meaningless without also knowing the sensor's FOV and
-resolution every time it's consumed downstream — computing the real
-angle once, at the source, means every consumer (dashboard display, a
-future control loop) gets a physically meaningful number without
-re-deriving the conversion each time.
+Frames go ESP32 to follower-server over UDP with no retries. For a live
+feed a late frame is worse than a missing one, TCP would retry and you'd
+end up processing old data thinking it's current.
 
-## Where sensor fusion stops — for now
+That only works if a frame fits in one datagram. Raw float32 frames are
+3072 bytes and arduino-esp32's WiFiUDP sends a packet every time its
+1460 byte buffer fills, so they came out as 3 packets and got rejected.
+Frames are now quantized to 8 bits with a min/scale header, 776 bytes,
+worst case error about 0.03 °C. Format is in `esp32_thermal/README.md`.
 
-The onboard Pixy2 tracker (primary flight control) and the
-Follower Server's thermal tracker (dashboard/monitoring) are two
-independent tracking channels that don't currently talk to each other.
-Fusing them — using thermal to help re-acquire a lost beacon, say — is
-a real, valuable next step, deliberately not built yet. Sensor fusion
-done casually is exactly how a "helpful" feature becomes a subtle
-safety problem (two disagreeing opinions about where the target is,
-silently reconciled by whichever code ran last). That's a design
-decision worth making deliberately, not a corner cut for time.
+## Boresight error in degrees
+
+`compute_boresight_error()` turns the blob position into an actual angle
+using the MLX90640's 55° FOV instead of returning "6 pixels right of
+center". Pixels mean nothing downstream without the FOV and resolution,
+so it gets converted once at the source.
+
+## No sensor fusion (yet)
+
+The pixy2 tracker (flies the drone) and the thermal tracker (dashboard)
+don't talk to each other. Using thermal to reacquire a lost beacon would
+be useful but it's not built on purpose. Two trackers disagreeing about
+where the target is, reconciled by whichever ran last, is how a
+"helpful" feature turns into a safety problem. That needs to be designed
+properly, not bolted on.
