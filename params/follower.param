@@ -1,69 +1,58 @@
 # ============================================================
-# FOLLOWER DRONE — ArduCopter parameter file
-# Board: MicoAir743-AIO (STM32H743, confirmed via ArduPilot's own
-#        wiki page for this exact board — UART table below is real,
-#        not guessed)
+# follower - ArduCopter 4.7.2 params
+# Board: MicoAir743-AIO (STM32H743)
 #
-# UART MAPPING (from ardupilot.org/copter/docs/common-MicoAir743-AIO.html):
+# UART map (ardupilot.org/copter/docs/common-MicoAir743-AIO.html):
 #   SERIAL0 -> USB
-#   SERIAL1 -> UART1  (MAVLink2 by default)  --> ESP32 companion link
-#   SERIAL2 -> UART2  (DisplayPort by default) --> unused, no VTX in this build
-#   SERIAL3 -> UART3  (GPS by default)        --> Walksnail WS-M181 GPS (its QMC5883 compass goes on the FC I2C pads)
-#   SERIAL4 -> UART4  (MAVLink2 by default)   --> MTF-01 optical flow/rangefinder
-#   SERIAL5 -> UART6  (RCIN by default)       --> ELRS RX (CRSF, needs TX6+RX6 both wired)
-#   SERIAL6 -> UART7  (RX-only, ESC telemetry)
-#   SERIAL7 -> UART8  (free/user)
-# Cross-checked against the firmware's own board definition, ArduPilot
-# Copter-4.6.3 libraries/AP_HAL_ChibiOS/hwdef/MicoAir743-AIO/hwdef.dat:
+#   SERIAL1 -> UART1  (MAVLink2 default)    --> ESP32 companion
+#   SERIAL2 -> UART2  (DisplayPort default) --> unused, no VTX
+#   SERIAL3 -> UART3  (GPS default)         --> WS-M181 GPS (its QMC5883 compass goes on the FC I2C pads)
+#   SERIAL4 -> UART4  (MAVLink2 default)    --> MTF-01 flow + rangefinder
+#   SERIAL5 -> UART6  (RCIN default)        --> ELRS RX (CRSF, wire both TX6 and RX6)
+#   SERIAL6 -> UART7  (RX only, ESC telemetry)
+#   SERIAL7 -> UART8  (free)
+# Matches the board's hwdef.dat in the firmware (4.6.3 and 4.7.2):
 #   SERIAL_ORDER OTG1 USART1 USART2 USART3 UART4 USART6 UART7 UART8
-# which matches the table above. (That hwdef also already defaults
-# SERIAL4 to MAVLink2 / OPTIONS 1024 / 115200 for an MTF-01.)
 #
-# Load this via Mission Planner: Config > Full Parameter List > Load from file
-# ALWAYS review before writing — this is a starting point, not gospel.
+# Load with Mission Planner: Config > Full Parameter List > Load from file.
+# Read it before writing it, it's a starting point.
 # ============================================================
 
 # ---- Frame ----
 FRAME_CLASS,1                  # Quad
 FRAME_TYPE,1                   # X
 
-# ---- SERIAL1 (UART1) — ESP32 companion computer ----
-# Matches FC_BAUD=57600 set in the ESP32 firmware (config.h).
-# Protocol 2 = MAVLink2, already the board default, set explicitly for clarity.
+# ---- SERIAL1 (UART1), ESP32 ----
+# has to match FC_BAUD 57600 in config.h. MAVLink2 is already the default,
+# just set so it's obvious
 SERIAL1_PROTOCOL,2
 SERIAL1_BAUD,57
 
-# ---- SERIAL4 (UART4) — MTF-01 optical flow + rangefinder ----
-# Per ardupilot.org/copter/docs/common-mtf-01.html. The sensor itself
-# must first be set to output "mav_apm" with mav_id 200 — see
-# docs/MTF01_SETUP.md. Without mav_id != 1, ArduPilot 4.5+ may not
-# recognise it.
-#
-# TARGET VERSION: ArduCopter 4.7.2 (what's flashed). 4.6 equivalents are
-# left as comments.
-SERIAL4_PROTOCOL,1             # MAVLink1 (what the MTF-01 speaks), not 2
+# ---- SERIAL4 (UART4), MTF-01 ----
+# From ardupilot.org/copter/docs/common-mtf-01.html. The sensor has to be
+# set to "mav_apm" with mav_id 200 first (docs/MTF01_SETUP.md), 4.5+ may
+# not see it on mav_id 1.
+SERIAL4_PROTOCOL,1             # MAVLink1, that's what the MTF-01 speaks
 SERIAL4_BAUD,115               # 115200
-# Don't forward MAVLink to/from the MTF-01. On 4.7 this lives in
-# MAVx_OPTIONS, x = the Nth MAVLink-protocol serial port counted from
-# SERIAL0 (AP_SerialManager::find_protocol_instance). Here: SERIAL0 USB =
-# MAV1, SERIAL1 ESP32 = MAV2, SERIAL4 MTF-01 = MAV3. Only valid while
-# SERIAL2/SERIAL3 are NOT MAVLink - if you change those, renumber.
-# The option only shows up after a reboot with SERIAL4_PROTOCOL set.
+# Don't forward MAVLink to/from the MTF-01. On 4.7 that's MAVx_OPTIONS
+# where x = the Nth MAVLink serial port counting from SERIAL0
+# (AP_SerialManager::find_protocol_instance). SERIAL0 USB = MAV1, SERIAL1
+# ESP32 = MAV2, SERIAL4 MTF-01 = MAV3. Only holds while SERIAL2/3 aren't
+# MAVLink, renumber if that changes. Shows up after a reboot with
+# SERIAL4_PROTOCOL set.
 MAV3_OPTIONS,2                 # bit 1: don't forward mavlink to/from
-# SERIAL4_OPTIONS,1024         # 4.6 and earlier instead of the line above
+# SERIAL4_OPTIONS,1024         # 4.6 and older use this instead
 
-# ---- SERIAL5 (UART6) — ELRS RX ----
-# Already RCIN by default on this board. CRSF auto-detected. No protocol
-# change needed — listed here only as a reminder both TX6 AND RX6 must
-# be physically wired for CRSF telemetry to work (RX-only wiring will
-# receive control but you lose RSSI/link-quality telemetry back).
+# ---- SERIAL5 (UART6), ELRS RX ----
+# Already RCIN by default and CRSF gets auto detected. Only here as a
+# reminder to wire both TX6 and RX6, RX only still flies but you lose
+# RSSI/link quality telemetry.
 SERIAL5_PROTOCOL,23
 
 # ---- Battery monitor ----
-# Board defaults. Note the board's wiki page says BATT_VOLT_MULT 21.2 but
-# the 4.6.3 hwdef compiles in HAL_BATT_VOLT_SCALE 21.12 (~0.4% apart).
-# Either is a nominal value, not a calibration: check the reported
-# voltage against a multimeter on your pack and adjust BATT_VOLT_MULT.
+# Board defaults. The wiki says BATT_VOLT_MULT 21.2 but the hwdef has
+# HAL_BATT_VOLT_SCALE 21.12. Neither is a calibration, check against a
+# multimeter and adjust BATT_VOLT_MULT.
 BATT_MONITOR,4
 BATT_VOLT_PIN,10
 BATT_CURR_PIN,11
@@ -71,118 +60,102 @@ BATT_VOLT_MULT,21.2
 BATT_AMP_PERVLT,14.14
 
 # ---- Battery failsafe ----
-# 4S pack, RDQ 850mAh. Tune BATT_LOW_VOLT/BATT_CRT_VOLT to your specific
-# cells' real discharge curve after a few flights — these are
-# conservative starting points, not final.
-BATT_LOW_VOLT,14.4             # ~3.6V/cell — land soon
-BATT_CRT_VOLT,13.6             # ~3.4V/cell — land NOW
-BATT_FS_LOW_ACT,1              # LAND on low battery (RTL needs a position fix; none indoors without GPS)
-BATT_FS_CRT_ACT,1              # LAND immediately on critical battery
-BATT_ARM_VOLT,15.2             # refuse to arm below ~3.8V/cell
+# 4S RDQ 850mAh. Conservative starting values, tune to the real discharge
+# curve after a few flights.
+BATT_LOW_VOLT,14.4             # ~3.6V/cell, land soon
+BATT_CRT_VOLT,13.6             # ~3.4V/cell, land now
+BATT_FS_LOW_ACT,1              # LAND on low battery (RTL needs a position fix, none indoors)
+BATT_FS_CRT_ACT,1              # LAND on critical battery
+BATT_ARM_VOLT,15.2             # won't arm below ~3.8V/cell
 
 # ---- GPS + compass (Walksnail WS-M181) ----
-# The WS-M181 is a u-blox M10 GPS (UART) with a built-in QMC5883 compass
-# (I2C). GPS TX/RX -> FC UART3 (SERIAL3); compass SDA/SCL -> FC I2C pads.
-# This board probes external I2C compasses (HAL_PROBE_EXTERNAL_I2C_COMPASSES
-# in its hwdef) and auto-fixes orientation on calibration
-# (COMPASS_AUTO_ROT default 2), so no orientation params are set here.
-# GPS type stays at its AUTO default (GPS_TYPE was renamed GPS1_TYPE in 4.6).
-SERIAL3_PROTOCOL,5             # GPS (already the board default; explicit)
+# u-blox M10 GPS on UART3 (SERIAL3) + QMC5883 compass on the FC I2C pads.
+# The board probes external I2C compasses (AP_COMPASS_PROBING_ENABLED in
+# the hwdef) and fixes orientation during calibration
+# (COMPASS_AUTO_ROT default 2) so no orientation params here. GPS type is
+# left on AUTO (GPS_TYPE got renamed GPS1_TYPE in 4.6).
+SERIAL3_PROTOCOL,5             # GPS (already the default)
 #
-# Compass = EKF yaw source, as in ArduPilot's optical-flow setup docs.
-# This replaces gyro-only yaw (which drifts). MUST before flight:
-#   - Mount the GPS/compass away from the ESC, battery leads and motors.
-#   - Run Mission Planner compass calibration; the FC refuses to arm
-#     until it's done (ARMING_CHECK keeps the compass check on).
-#   - Indoors, check the heading in the actual flying room: steel, rebar
-#     and wiring distort it. Bad heading = flow position control drifts.
+# Compass is the EKF yaw source, same as ArduPilot's optical flow setup.
+# Replaces gyro only yaw which drifts. Before flying:
+#   - mount the GPS/compass away from the ESC, battery leads and motors
+#   - do the compass calibration, it won't arm until you do
+#   - check the heading in the actual room. steel, rebar and wiring bend
+#     it and a bad heading makes flow position hold drift
 COMPASS_ENABLE,1
 COMPASS_USE,1
 EK3_SRC1_YAW,1                 # Compass
 
 # ---- Optical flow / rangefinder (MTF-01) ----
-# (FLOW_ENABLE removed: no such parameter. FLOW_TYPE != 0 enables flow.)
-FLOW_TYPE,5                    # MAVLink (6 is DroneCAN — wrong for a UART sensor)
-# FLOW_ORIENT_YAW: ArduPilot's default MTF-01 orientation is rotated 180
-# degrees from the INAV/FMT one. If mounted the INAV/FMT way, set
-# FLOW_ORIENT_YAW,18000. A wrong value inverts flow feedback and can cause
-# a flyaway — check flow against attitude before flying (MTF01_SETUP.md).
-# TODO(CG measurement): FLOW_POS_X/Y/Z are the sensor's offset from the
-# centre of gravity in metres (X forward, Y right, Z down). 0.0 is a
-# placeholder, NOT a measured value. Measure once the airframe is built.
+# (there's no FLOW_ENABLE param, FLOW_TYPE != 0 turns flow on)
+FLOW_TYPE,5                    # MAVLink (6 is DroneCAN, wrong for a uart sensor)
+# FLOW_ORIENT_YAW: ArduPilot's default MTF-01 orientation is 180 deg off
+# from the INAV/FMT one. If it's mounted the INAV/FMT way set
+# FLOW_ORIENT_YAW,18000. Wrong value flips the flow feedback and can cause
+# a flyaway, check flow vs attitude before flying (MTF01_SETUP.md).
+# TODO(CG measurement): FLOW_POS_X/Y/Z = sensor offset from CG in metres
+# (X forward, Y right, Z down). 0.0 is a placeholder not a measurement.
 FLOW_POS_X,0.0                 # TODO: measure
-FLOW_POS_Y,0.0                 # TODO: measure (BOM: lens at y = -9 mm from frame centre -> about -0.009 once CG is confirmed)
+FLOW_POS_Y,0.0                 # TODO: measure (BOM has the lens at y = -9 mm from frame center, so ~-0.009 once CG is confirmed)
 FLOW_POS_Z,0.0                 # TODO: measure
 RNGFND1_TYPE,10                # MAVLink rangefinder
 RNGFND1_ORIENT,25              # Down
-RNGFND1_MIN,0.01               # metres (4.7+)
+RNGFND1_MIN,0.01               # metres
 RNGFND1_MAX,8                  # 8 m
-# 4.6 and earlier used centimetres instead:
+# 4.6 and older used centimetres:
 # RNGFND1_MIN_CM,1
 # RNGFND1_MAX_CM,800
 
-# ---- EKF3 sources — flow-based nav (no GPS assumed for indoor flight) ----
+# ---- EKF3 sources, flow based nav (no GPS indoors) ----
 EK3_ENABLE,1
 EK3_SRC1_VELXY,5               # optical flow for XY velocity
-EK3_SRC1_VELZ,0                # none (default 3 = GPS; no GPS fix indoors). Per ardupilot.org optical flow setup
+EK3_SRC1_VELZ,0                # none (default 3 = GPS, no fix indoors). per ardupilot.org flow setup
 EK3_SRC1_POSZ,2                # rangefinder for altitude
-EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
-                                # velocity control still works fine on flow alone
+EK3_SRC1_POSXY,0               # no XY position source without GPS, GUIDED
+                                # velocity still works on flow alone
 
 # ---- Arming checks ----
-# ARMING_CHECK is ArduPilot's ONLY arming-check parameter — a single
-# bitmask, where the value 1 specifically means "all checks," not bit
-# position 0. There is no separate "ARMING_CHECK_MASK" parameter; an
-# earlier draft of this file invented one that doesn't exist in real
-# ArduPilot and would have silently done nothing on load.
-#
-# Left at 1 (all checks) deliberately. The compass check stays ON (the
-# WS-M181 compass is used for yaw). Indoors there is no GPS fix, so the
-# FC will REFUSE TO ARM until you go into Mission Planner's Setup ->
-# Mandatory Hardware -> Arming Checks screen and manually UNCHECK just
-# "GPS Lock" there. Doing it through that
-# GUI is deliberate: it shows you exactly which checks are on/off with
-# no bitmask arithmetic to get wrong, which matters here because
-# getting a hand-computed bitmask wrong risks silently disabling MORE
-# checks than intended, not fewer — the dangerous direction to err in.
-# 4.7 removed ARMING_CHECK. Its replacement ARMING_SKIPCHK is inverted:
-# 0 = skip nothing, the same as the old ARMING_CHECK,1. Unticking "GPS
-# Lock" in the Arming Checks screen sets the right bit for you; don't
-# hand-edit this mask.
+# All checks on. Compass check stays on since the WS-M181 compass is used
+# for yaw. Indoors there's no GPS fix so it won't arm until you untick
+# just "GPS Lock" in Setup > Mandatory Hardware > Arming Checks. Do it in
+# the GUI, not by hand, a wrong hand computed bitmask can turn off more
+# checks than you meant to.
+# 4.7 removed ARMING_CHECK. ARMING_SKIPCHK replaced it and it's inverted,
+# 0 = skip nothing = the old ARMING_CHECK,1. The GUI sets the GPS Lock bit.
 ARMING_SKIPCHK,0
-# ARMING_CHECK,1               # 4.6 and earlier instead of the line above
+# ARMING_CHECK,1               # 4.6 and older use this instead
 
 # ---- Failsafes ----
-FS_THR_ENABLE,3                # RC loss failsafe: always LAND (not RTL - no GPS fix indoors, so no home)
-FS_THR_VALUE,975               # below this PWM on throttle = failsafe
+FS_THR_ENABLE,3                # RC loss: always LAND (not RTL, no GPS fix indoors so no home)
+FS_THR_VALUE,975               # throttle PWM below this = failsafe
 FS_OPTIONS,0
-FS_GCS_ENABLE,0                # no GCS failsafe — companion link loss
-                                # should not itself trigger a failsafe,
-                                # RC loss is the one that matters here
+FS_GCS_ENABLE,0                # no GCS failsafe. losing the companion link
+                                # shouldn't trigger one, RC loss is the
+                                # one that matters
 
-# ---- GUIDED mode (used by the ESP32 follower velocity commands) ----
+# ---- GUIDED (what the ESP32's velocity commands use) ----
 GUID_OPTIONS,0
 
-# ---- RC switches: SET THESE BEFORE FLYING (commented out on purpose) ----
-# The LiteRadio 3's switch-to-channel mapping isn't documented, so the
-# channel numbers below are placeholders. Find them in Mission Planner:
-# Setup -> Mandatory Hardware -> Radio Calibration, flip each switch and
-# note which channel moves (and whether it has 2 or 3 positions).
-# Do NOT use channels 1-4 (sticks). ELRS uses channel 5 as its arm/AUX1
-# channel; keep the e-stop on a 2-position switch.
+# ---- RC switches: set these before flying (commented out on purpose) ----
+# Couldn't find the LiteRadio 3's switch to channel mapping documented
+# anywhere so the channels below are placeholders. Find them in Mission
+# Planner: Setup > Mandatory Hardware > Radio Calibration, flip each switch
+# and write down which channel moves and if it's 2 or 3 position.
+# Don't use channels 1-4 (sticks). ELRS uses channel 5 as AUX1/arm. Put
+# the e-stop on a 2 position switch.
 #
-# Flight-mode switch (3-position; ArduCopter reads PWM bands, a 3-pos
-# switch lands on FLTMODE1 / FLTMODE4 / FLTMODE6):
+# Flight mode switch (3 position). ArduCopter reads PWM bands, a 3 pos
+# switch lands on FLTMODE1 / FLTMODE4 / FLTMODE6:
 # FLTMODE_CH,<3-pos channel>
-# FLTMODE1,2      # switch low  = ALT_HOLD  (take off / manual)
+# FLTMODE1,2      # low  = ALT_HOLD (takeoff / manual)
 # FLTMODE2,2
 # FLTMODE3,2
-# FLTMODE4,5      # switch mid  = LOITER    (hold position: the abort)
+# FLTMODE4,5      # mid  = LOITER   (hold position, the abort)
 # FLTMODE5,5
-# FLTMODE6,4      # switch high = GUIDED    (follower active)
+# FLTMODE6,4      # high = GUIDED   (follower on)
 #
-# Emergency motor stop (2-position). Motors stop instantly; the drone
-# falls. Last resort only:
+# Emergency motor stop (2 position). Motors stop instantly and it falls.
+# Last resort:
 # RC<ch>_OPTION,31   # Motor Emergency Stop
 #
 # Arming stays on the sticks (throttle down + yaw right, ARMING_RUDDER
