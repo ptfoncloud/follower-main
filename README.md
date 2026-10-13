@@ -29,7 +29,7 @@ the thermal-tracking service that runs on Henri lives in
 | Thermal (secondary tracking) | Adafruit MLX90640, 55° FOV |
 | RC receiver | RadioMaster RP1 (ExpressLRS, CRSF) |
 | RC transmitter | BetaFPV LiteRadio 3 |
-| Firmware | ArduCopter (ArduPilot 4.6.0+) |
+| Firmware | ArduCopter 4.6.x (param file target; confirm in Mission Planner) |
 
 ## The one thing worth understanding before anything else
 
@@ -43,7 +43,15 @@ standalone, independent of any ESP32 hardware:
 g++ -std=c++17 -Wall -Wextra -Werror -o test_safety_gate test/native/test_safety_gate.cpp
 ./test_safety_gate
 # ALL 13 CHECKS PASSED
+
+# thermal wire format (esp32_thermal/thermal_wire.h)
+g++ -std=c++17 -Wall -Wextra -Werror -o test_thermal_wire test/native/test_thermal_wire.cpp
+./test_thermal_wire
+# ALL 17 CHECKS PASSED
 ```
+
+The tests include `src/config.h`, so they check the real
+`FC_LINK_TIMEOUT_MS` / `ARDUCOPTER_MODE_GUIDED`, not copies.
 
 `main.cpp` includes and calls this exact function — the tests aren't
 exercising a parallel reimplementation that could quietly drift out of
@@ -56,9 +64,13 @@ sync with the real flight code.
 ├── src/
 │   ├── main.cpp           # ESP32 firmware
 │   ├── safety_gate.h      # the gating logic — tested standalone
-│   └── config.h           # tuning constants
+│   ├── config.h           # tuning constants
+│   ├── secrets.example.h  # copy to secrets.h (gitignored) for WiFi creds
+│   └── bench/
+│       └── pixy_bench.cpp # Pixy2 SPI bench test (env:pixy_bench), no FC
 ├── test/native/
-│   └── test_safety_gate.cpp
+│   ├── test_safety_gate.cpp
+│   └── test_thermal_wire.cpp
 ├── params/
 │   └── follower.param     # full ArduCopter parameter set
 ├── esp32_thermal/
@@ -69,6 +81,7 @@ sync with the real flight code.
 │   └── launch_mavproxy.ps1
 ├── docs/
 │   ├── OPERATIONS.md            # preflight checklist, abort procedure
+│   ├── MTF01_SETUP.md           # MTF-01 sensor + FC setup, bench check
 │   ├── ENGINEERING_DECISIONS.md # why, not just what
 │   ├── beacon_training.md       # Pixy2 signature training walkthrough
 │   └── assets/architecture.svg
@@ -77,14 +90,18 @@ sync with the real flight code.
 
 ## Setup, in order
 
-1. **Read `params/follower.param`** and its comments before loading it
-   into the FC. Two values need physical measurement, not a default:
-   `FLOW_POS_X/Y/Z` (MTF-01 offset from CG) and `SERIAL4_BAUD` (verify
-   against your actual MTF-01 unit).
-2. **Train the beacon** — `docs/beacon_training.md`, on the bench,
-   before anything flies.
+1. **Check your ArduCopter version, then read `params/follower.param`**
+   and its comments before loading it. The file targets **4.6.x**; 4.7+
+   renamed several parameters (the alternatives are in the file as
+   comments). `FLOW_POS_X/Y/Z` still need a physical CG measurement.
+   Set up the MTF-01 itself first: `docs/MTF01_SETUP.md`.
+2. **Bench-test the Pixy2 link** — `pio run -e pixy_bench -t upload`,
+   then `pio device monitor -e pixy_bench` (no FC needed). Then **train
+   the beacon** — `docs/beacon_training.md`, before anything flies.
 3. **Set `PRIMARY_SIG`** in `src/config.h`, then `pio run -e esp32dev
-   --target upload`.
+   --target upload`. There's deliberately no `upload_port`: COM3 is the
+   flight controller. Add `--upload-port COMx` if auto-detect picks
+   the wrong board.
 4. **Read `docs/OPERATIONS.md`** — the actual preflight checklist and
    abort procedure, not just code comments.
 5. Bench test props-off, then fly.
@@ -99,9 +116,12 @@ sync with the real flight code.
 - No compass — see `docs/ENGINEERING_DECISIONS.md` for the real
   consequence (yaw drift) and why it's disabled rather than
   half-configured.
-- Gesture control via Leap Motion — architecture is settled (browser
-  LeapJS → backend classifier → same command endpoints the dashboard
-  uses), implementation not started.
+- Gesture control via Leap Motion lives in gcs-ground-control (browser
+  LeapJS → backend classifier → same command path as the dashboard).
+  No gesture maps to DISARM.
+- `ENABLE_LINE_FALLBACK` is 0: losing the beacon means LOST (hold
+  position). Pixy2's line program tracks floor seams and edges, not
+  people, so it is not used as a person-tracking fallback.
 
 ## License
 
