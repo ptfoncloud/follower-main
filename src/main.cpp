@@ -60,9 +60,24 @@ void sendVelocity(float vx, float vy, float vz) {
         fcArmed, fcCustomMode, ARDUCOPTER_MODE_GUIDED,
         lastFcHeartbeatMs, millis(), FC_LINK_TIMEOUT_MS
     );
+    // Log suppression when the reason changes, and otherwise at most once
+    // per GATE_LOG_INTERVAL_MS — sendVelocity() runs every 100 ms, so
+    // logging every call buried everything else while disarmed.
+    static const char* lastGateReason = nullptr;   // nullptr = gate was open
+    static uint32_t    lastGateLogMs  = 0;
     if (!gate.should_command) {
-        Serial.printf("[GATE] Suppressed: %s\n", gate.reason);
+        uint32_t now = millis();
+        bool changed = !lastGateReason || strcmp(lastGateReason, gate.reason) != 0;
+        if (changed || now - lastGateLogMs >= GATE_LOG_INTERVAL_MS) {
+            Serial.printf("[GATE] Suppressed: %s\n", gate.reason);
+            lastGateLogMs = now;
+        }
+        lastGateReason = gate.reason;
         return;
+    }
+    if (lastGateReason) {
+        Serial.println("[GATE] Open: commanding velocity");
+        lastGateReason = nullptr;
     }
 
     mavlink_message_t msg;

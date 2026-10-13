@@ -107,6 +107,10 @@
 // docs/ENGINEERING_DECISIONS.md for why gating on mode+armed exists
 // at all rather than trusting the tracking loop to just behave.
 
+#define GATE_LOG_INTERVAL_MS    1000
+// "[GATE] Suppressed: ..." is printed when the reason changes, otherwise
+// at most this often. Logging only — has no effect on gating itself.
+
 #define FC_LINK_TIMEOUT_MS      3000
 // No FC heartbeat this recent = treat the link as dead and stop
 // commanding, regardless of what the tracking state machine thinks
