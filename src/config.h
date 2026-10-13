@@ -49,9 +49,18 @@
 
 #define FALLBACK_CYCLES     10
 // How many CONSECUTIVE frames of "no beacon found" in PRIMARY mode
-// before switching to the cruder FALLBACK (silhouette) tracker. Not
+// before giving up on PRIMARY — to LOST (hold position) by default, or
+// to the FALLBACK line tracker if ENABLE_LINE_FALLBACK is 1. Not
 // time-based like LOST_TIMEOUT_MS — this is frame-count-based, so it
 // scales naturally with however fast the main loop actually runs.
+
+#define ENABLE_LINE_FALLBACK 0
+// 0 (default): losing the beacon goes straight to LOST = hold position.
+// 1: losing the beacon switches Pixy2 to its "line" program and steers
+//    toward the first line vector it finds. SAFETY: that program detects
+//    line FEATURES (floor seams, table edges, door frames), not people —
+//    commanding velocity toward them can steer the vehicle at random
+//    structure. Only enable for deliberate bench experiments.
 
 // ── Velocity limits (m/s) ─────────────────────────────────────────
 // Hard caps applied to every velocity command right before it's sent —

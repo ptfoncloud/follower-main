@@ -9,9 +9,11 @@
     logic inline anymore, so a passing native test is a guarantee
     about this actual flight code, not a parallel copy of it.
 
-    Tracking strategy unchanged:
+    Tracking strategy:
       PRIMARY   — Pixy2 color blob (subject wears a colored beacon)
-      FALLBACK  — Pixy2 line/silhouette tracking (CC mode 2)
+      FALLBACK  — Pixy2 "line" program. OFF by default
+                  (ENABLE_LINE_FALLBACK in config.h): it tracks line
+                  features, not people. When off, PRIMARY -> LOST.
       LOST      — hold position, emit warning
     ================================================================ */
 
@@ -218,9 +220,15 @@ void loop() {
             } else {
                 primaryMissCount++;
                 if (primaryMissCount >= FALLBACK_CYCLES) {
+#if ENABLE_LINE_FALLBACK
                     Serial.println("[FOLLOWER] Primary lost -> FALLBACK");
                     trackMode = MODE_FALLBACK;
                     pixy.changeProg("line");
+#else
+                    // Line features aren't people (see config.h) - hold instead.
+                    Serial.println("[FOLLOWER] Primary lost -> LOST (line fallback disabled)");
+                    trackMode = MODE_LOST;
+#endif
                 }
             }
             break;

@@ -25,8 +25,8 @@ habit that catches most of what actually goes wrong.
    ArduPilot arming checks (EKF health, GPS if enabled) can silently
    refuse a mode change.
 4. **Confirm the beacon trains cleanly** — hold it in frame, watch for
-   `[FOLLOWER] Primary lost -> FALLBACK` NOT appearing while the beacon
-   sits still in view. If it flickers between primary/fallback with a
+   `[FOLLOWER] Primary lost -> LOST` NOT appearing while the beacon
+   sits still in view. If it flickers between PRIMARY and LOST with a
    stationary beacon, stop and retrain (`docs/beacon_training.md`)
    before flying, not after.
 5. **Battery voltage check** — confirm it reads sane on the dashboard
@@ -43,11 +43,17 @@ habit that catches most of what actually goes wrong.
   ESP32 just stops adding its own input on top. This is the actual
   override mechanism. No separate "disable follower" switch exists
   because none is needed — mode-switching already does it.
-- Tracking state (`PRIMARY` / `FALLBACK` / `LOST`) is visible on the
-  status LED and in the serial log. `LOST` means the drone is holding
-  position, not descending or doing anything unexpected — it will
-  resume tracking automatically the moment the beacon (or a
-  fallback-quality silhouette) reappears in frame.
+- Tracking state (`PRIMARY` / `LOST`) is visible on the status LED and
+  in the serial log. About 1 s (`FALLBACK_CYCLES`) after the beacon
+  disappears the ESP32 goes to `LOST` and commands zero velocity —
+  holding position, not descending or doing anything unexpected. It
+  resumes tracking automatically when the beacon reappears in frame.
+- There is a `FALLBACK` state that steers using Pixy2's "line"
+  program, but it is **compiled out by default**
+  (`ENABLE_LINE_FALLBACK 0` in `src/config.h`). That program detects
+  line features — floor seams, table edges — not people, so steering
+  toward them could fly the vehicle at random structure. Leave it off
+  for flight.
 
 ## Link loss
 

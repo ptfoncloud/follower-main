@@ -66,7 +66,7 @@ on the bench, before it's on a flying drone.
 With the beacon trained, run the ESP32 firmware and watch the serial
 monitor (`pio device monitor`). You should see the LED go solid
 (PRIMARY mode) when the beacon is visible and NOT flicker between
-PRIMARY/FALLBACK/LOST when the beacon just sits still in frame. If it's
+PRIMARY/LOST when the beacon just sits still in frame. If it's
 flickering, the signature isn't clean — go back to step 4 and retrain
 with a tighter selection.
 
@@ -76,6 +76,8 @@ Pixy2's signature matching is a hue/saturation match, not exact-pixel.
 It WILL be somewhat sensitive to big lighting changes between training
 and flying (indoor fluorescent vs outdoor overcast vs outdoor direct
 sun are genuinely different enough to matter). If you're planning to
-fly in multiple lighting conditions, either retrain per-session, or
-accept the fallback (silhouette tracking) will be doing more of the
-work than you'd like on days the light doesn't match training.
+fly in multiple lighting conditions, retrain per-session. A signature
+that doesn't match the day's light means the drone spends more time in
+LOST (holding position) — there is no person-tracking fallback behind
+the beacon; the line-feature fallback is disabled by default because it
+tracks floor seams and edges, not people.
