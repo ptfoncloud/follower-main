@@ -179,9 +179,21 @@ void setup() {
     pinMode(STATUS_LED, OUTPUT);
 
     Serial.println("[FOLLOWER] Initialising Pixy2...");
-    pixy.init();
-    pixy.changeProg("ccc");
-    Serial.println("[FOLLOWER] Pixy2 ready.");
+    int8_t pixyRes = pixy.init();   // waits up to ~5 s for Pixy2 to answer
+    if (pixyRes < 0) {
+        // Not fatal: with no blocks the tracker stays LOST (= hold).
+        Serial.printf("[FOLLOWER] ERROR: Pixy2 init failed (%d, -4 = timeout). "
+                      "Check SPI wiring (MISO 19, SCK 18, MOSI 23, no CS) and that "
+                      "PixyMon's interface is \"Arduino ICSP SPI\". Tracking will stay LOST.\n",
+                      pixyRes);
+    } else {
+        pixyRes = pixy.changeProg("ccc");
+        if (pixyRes < 0) {
+            Serial.printf("[FOLLOWER] ERROR: Pixy2 changeProg(\"ccc\") failed (%d)\n", pixyRes);
+        } else {
+            Serial.println("[FOLLOWER] Pixy2 ready.");
+        }
+    }
     Serial.printf("[FOLLOWER] Primary sig: %d  Lost timeout: %d ms\n", PRIMARY_SIG, LOST_TIMEOUT_MS);
     Serial.println("[FOLLOWER] Waiting for FC heartbeat before commanding...");
 }
