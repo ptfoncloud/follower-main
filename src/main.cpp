@@ -32,7 +32,7 @@ uint32_t lastDetectMs     = 0;
 int      primaryMissCount = 0;
 
 bool     fcArmed          = false;
-uint8_t  fcCustomMode     = 0;
+uint32_t fcCustomMode     = 0;   // HEARTBEAT.custom_mode is uint32
 uint32_t lastFcHeartbeatMs = 0;
 // ARDUCOPTER_MODE_GUIDED and FC_LINK_TIMEOUT_MS now live in config.h,
 // alongside every other tunable — see the note there on why.

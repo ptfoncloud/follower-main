@@ -24,8 +24,8 @@ struct SafetyGateResult {
     condition. */
 inline SafetyGateResult evaluate_safety_gate(
     bool fc_armed,
-    uint8_t fc_custom_mode,
-    uint8_t required_mode,
+    uint32_t fc_custom_mode,   // full HEARTBEAT.custom_mode — never truncate
+    uint32_t required_mode,    // to 8 bits: 0x104 would then read as GUIDED (4)
     uint32_t last_heartbeat_ms,
     uint32_t now_ms,
     uint32_t link_timeout_ms

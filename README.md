@@ -3,7 +3,7 @@
 ![PlatformIO](https://img.shields.io/badge/PlatformIO-ESP32-orange)
 ![MAVLink](https://img.shields.io/badge/protocol-MAVLink%202.0-blue)
 ![ArduPilot](https://img.shields.io/badge/firmware-ArduCopter-green)
-![Safety tests](https://img.shields.io/badge/safety__gate-10%2F10%20passing-brightgreen)
+![Safety tests](https://img.shields.io/badge/safety__gate-13%2F13%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 The flight stack. ESP32 companion firmware that tracks a subject via
@@ -42,7 +42,7 @@ standalone, independent of any ESP32 hardware:
 ```bash
 g++ -std=c++17 -Wall -Wextra -Werror -o test_safety_gate test/native/test_safety_gate.cpp
 ./test_safety_gate
-# ALL 10 CHECKS PASSED
+# ALL 13 CHECKS PASSED
 ```
 
 `main.cpp` includes and calls this exact function — the tests aren't

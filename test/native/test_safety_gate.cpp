@@ -1,14 +1,19 @@
 /*  Desktop-compilable tests for safety_gate.h. Plain asserts, no test
     framework dependency — keeps the native build trivial (just g++,
     no PlatformIO test runner needed to at least run this locally).
-    CI runs this via PlatformIO's native test environment. */
+    CI (.github/workflows/build.yml) compiles it the same way, with
+    g++ -std=c++17 -Wall -Wextra -Werror. */
 
 #include <cassert>
 #include <cstdio>
 #include "../../src/safety_gate.h"
+// The real flight constants, not test-local copies: if FC_LINK_TIMEOUT_MS
+// or ARDUCOPTER_MODE_GUIDED change in config.h, these tests follow.
+// (config.h's MAVLink macros are never expanded here, so it needs no
+// Arduino/MAVLink headers.)
+#include "../../src/config.h"
 
-#define ARDUCOPTER_MODE_GUIDED 4
-#define LINK_TIMEOUT_MS 3000
+#define LINK_TIMEOUT_MS FC_LINK_TIMEOUT_MS
 
 int tests_run = 0;
 #define CHECK(cond) do { \
@@ -89,6 +94,26 @@ int main() {
                                                 1000, 1001, LINK_TIMEOUT_MS);
         CHECK(disarmed_r.should_command == false);
     }
+
+    // ---- HEARTBEAT.custom_mode is uint32. A mode whose low byte is 4
+    // (260 = 0x104) is NOT GUIDED and must not pass by truncation ----
+    {
+        uint32_t custom_mode_260 = 0x104;
+        auto r = evaluate_safety_gate(true, custom_mode_260, ARDUCOPTER_MODE_GUIDED,
+                                       1000, 1000, LINK_TIMEOUT_MS);
+        CHECK(r.should_command == false);
+    }
+
+    // ---- Same with the high bits set: 0xFFFFFF04 is not GUIDED ----
+    {
+        uint32_t custom_mode_hi = 0xFFFFFF04u;
+        auto r = evaluate_safety_gate(true, custom_mode_hi, ARDUCOPTER_MODE_GUIDED,
+                                       1000, 1000, LINK_TIMEOUT_MS);
+        CHECK(r.should_command == false);
+    }
+
+    // ---- The test really is using the flight timeout from config.h ----
+    CHECK(LINK_TIMEOUT_MS == 3000);
 
     printf("ALL %d CHECKS PASSED\n", tests_run);
     return 0;
