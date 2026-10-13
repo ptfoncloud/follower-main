@@ -15,7 +15,7 @@
 #   SERIAL5 -> UART5  (none)                --> unused
 #   SERIAL6 -> UART6  (RCIN default)        --> ELRS RX (CRSF, wire both TX6 and RX6)
 #   SERIAL7 -> UART7  (RX only, ESC telemetry default)
-#   SERIAL8 -> UART8  (MAVLink2 115200 default) --> onboard bluetooth
+#   SERIAL8 -> UART8  (MAVLink2 115200 default) --> onboard bluetooth, turned OFF below
 #   SERIAL_ORDER OTG1 USART1 USART2 USART3 UART4 UART5 USART6 UART7 UART8
 #
 # Load with Mission Planner: Config > Full Parameter List > Load from file.
@@ -51,7 +51,7 @@ SERIAL4_BAUD,115               # 115200
 # Don't forward MAVLink to/from the MTF-01. On 4.7 that's MAVx_OPTIONS
 # where x = the Nth MAVLink serial port counting from SERIAL0
 # (AP_SerialManager::find_protocol_instance). SERIAL0 USB = MAV1, SERIAL1
-# ESP32 = MAV2, SERIAL4 MTF-01 = MAV3 (SERIAL8 bluetooth is MAV4). Only holds
+# ESP32 = MAV2, SERIAL4 MTF-01 = MAV3 (bluetooth on SERIAL8 is off). Only holds
 # while SERIAL2/3 aren't MAVLink, renumber if that changes. Shows up after a
 # reboot with SERIAL4_PROTOCOL set.
 MAV3_OPTIONS,2                 # bit 1: don't forward mavlink to/from
@@ -67,6 +67,13 @@ SERIAL5_PROTOCOL,-1
 # Already RCIN by default on the 743v2 and CRSF gets auto detected. Wire both
 # TX6 and RX6, RX only still flies but you lose RSSI/link quality telemetry.
 SERIAL6_PROTOCOL,23
+
+# ---- SERIAL8 (UART8), onboard bluetooth: OFF ----
+# The 743v2 hwdef defaults this to MAVLink2 on the onboard bluetooth
+# module. MAVLink has no auth, so anyone nearby with a GCS app could connect
+# and send commands, arm included. Not used here, so it's off. If it's ever
+# needed, turn it back on on purpose (SERIAL8_PROTOCOL,2) and only on the bench.
+SERIAL8_PROTOCOL,-1
 
 # ---- Battery monitor ----
 # 21.12 / 14.14 are MicoAir's values for the AIO 35A

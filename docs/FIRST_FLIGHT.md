@@ -52,6 +52,8 @@ boards do).
   param file is written for 4.7.
 - [ ] Load `params/follower.param`, write, reboot, load it again (some
   params only show up after a reboot), reboot
+- [ ] Check `SERIAL8_PROTOCOL` reads -1 (onboard bluetooth off). It's an
+  open MAVLink link anyone nearby could arm through, so it stays off.
 - [ ] Accel calibration
 - [ ] Compass calibration (won't arm without it)
 - [ ] Radio calibration. Flip each LiteRadio switch and write down which
