@@ -75,8 +75,14 @@ void sendVelocity(float vx, float vy, float vz) {
     mavlink_msg_set_position_target_local_ned_pack(
         MY_SYSID, MY_COMPID, &msg,
         millis(), FC_SYSID, FC_COMPID,
+        // Velocity is rotated by current heading in BODY_NED (ArduCopter
+        // GCS_Mavlink.cpp handle_message_set_position_target_local_ned).
         MAV_FRAME_BODY_NED,
-        0x0FC7,
+        // 0x0DC7 (3527): ArduPilot's documented "use velocity" mask —
+        // ignore pos, accel, yaw, yaw rate. The old 0x0FC7 also set bit 9
+        // (FORCE_SET), which ArduCopter only tolerates because accel is
+        // ignored; don't rely on that.
+        0x0DC7,
         0, 0, 0,
         vx, vy, vz,
         0, 0, 0,
