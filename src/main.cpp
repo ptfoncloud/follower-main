@@ -251,6 +251,10 @@ void loop() {
                 sendVelocity(vx, vy, vz);
                 digitalWrite(STATUS_LED, HIGH);
             } else {
+                // Hold on every missed frame. Sending nothing would leave
+                // the FC flying the last velocity (up to VEL_MAX_XY) until
+                // LOST, ~FALLBACK_CYCLES x 100 ms later.
+                sendHold();
                 primaryMissCount++;
                 if (primaryMissCount >= FALLBACK_CYCLES) {
 #if ENABLE_LINE_FALLBACK
@@ -272,9 +276,12 @@ void loop() {
                 lastDetectMs = now;
                 sendVelocity(vx, vy, vz);
                 digitalWrite(STATUS_LED, (now / 250) % 2);
-            } else if (now - lastDetectMs > LOST_TIMEOUT_MS) {
-                Serial.println("[FOLLOWER] Fallback lost -> LOST");
-                trackMode = MODE_LOST;
+            } else {
+                sendHold();   // same rule as PRIMARY: no target = zero velocity
+                if (now - lastDetectMs > LOST_TIMEOUT_MS) {
+                    Serial.println("[FOLLOWER] Fallback lost -> LOST");
+                    trackMode = MODE_LOST;
+                }
             }
 
             // Periodically check whether PRIMARY tracking has come back,

@@ -118,7 +118,8 @@ sync with the real flight code.
   half-configured.
 - Gesture control via Leap Motion lives in gcs-ground-control (browser
   LeapJS → backend classifier → same command path as the dashboard).
-  No gesture maps to DISARM.
+  No gesture maps to ARM or DISARM — arm/disarm is the transmitter
+  or the console button only.
 - `ENABLE_LINE_FALLBACK` is 0: losing the beacon means LOST (hold
   position). Pixy2's line program tracks floor seams and edges, not
   people, so it is not used as a person-tracking fallback.

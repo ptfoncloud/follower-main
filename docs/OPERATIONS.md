@@ -44,10 +44,12 @@ habit that catches most of what actually goes wrong.
   override mechanism. No separate "disable follower" switch exists
   because none is needed — mode-switching already does it.
 - Tracking state (`PRIMARY` / `LOST`) is visible on the status LED and
-  in the serial log. About 1 s (`FALLBACK_CYCLES`) after the beacon
-  disappears the ESP32 goes to `LOST` and commands zero velocity —
-  holding position, not descending or doing anything unexpected. It
-  resumes tracking automatically when the beacon reappears in frame.
+  in the serial log. **The first frame without the beacon commands zero
+  velocity** (hold position) — the FC never keeps flying the last
+  velocity on stale information. About 1 s (`FALLBACK_CYCLES`) of misses
+  later the state changes to `LOST`, which keeps holding. Nothing
+  descends or does anything unexpected; tracking resumes automatically
+  when the beacon reappears.
 - There is a `FALLBACK` state that steers using Pixy2's "line"
   program, but it is **compiled out by default**
   (`ENABLE_LINE_FALLBACK 0` in `src/config.h`). That program detects
