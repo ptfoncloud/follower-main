@@ -47,7 +47,7 @@ perceived lag.
 ## Gyro-only yaw, no compass — a real limitation, not a hidden one
 
 The MicoAir743-AIO has no built-in compass and none is in this build's
-BOM. Rather than leave `COMPASS_ENABLED` half-configured with no sensor
+BOM. Rather than leave `COMPASS_ENABLE` half-configured with no sensor
 behind it, it's explicitly disabled and yaw comes from gyro integration
 alone, documented plainly in `follower.param`'s comments. **The actual
 cost:** yaw drifts over time with no absolute reference to correct it —

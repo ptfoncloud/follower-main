@@ -77,14 +77,14 @@ BATT_ARM_VOLT,15.2             # refuse to arm below ~3.8V/cell
 # entirely rather than leaving it half-configured with no sensor.
 # REAL CONSEQUENCE: yaw comes from gyro integration only and WILL drift
 # over time — fine for short test hops, not for long autonomous missions.
-# If you add an external I2C compass later, set COMPASS_ENABLED back to
+# If you add an external I2C compass later, set COMPASS_ENABLE back to
 # 1 and run the compass calibration wizard in Mission Planner.
-COMPASS_ENABLED,0
+COMPASS_ENABLE,0               # (was COMPASS_ENABLED, which does not exist)
 COMPASS_USE,0
 EK3_SRC1_YAW,0                 # gyro-only yaw source, expect drift
 
 # ---- Optical flow / rangefinder (MTF-01) ----
-FLOW_ENABLE,1
+# (FLOW_ENABLE removed: no such parameter. FLOW_TYPE != 0 enables flow.)
 FLOW_TYPE,5                    # MAVLink (6 is DroneCAN — wrong for a UART sensor)
 # FLOW_ORIENT_YAW: ArduPilot's default MTF-01 orientation is rotated 180
 # degrees from the INAV/FMT one. If mounted the INAV/FMT way, set
@@ -128,6 +128,11 @@ EK3_SRC1_POSXY,0               # no XY position source without GPS — GUIDED
 # getting a hand-computed bitmask wrong risks silently disabling MORE
 # checks than intended, not fewer — the dangerous direction to err in.
 ARMING_CHECK,1
+# ArduCopter 4.7+: ARMING_CHECK no longer exists. It was replaced by
+# ARMING_SKIPCHK, an inverted mask whose default 0 means "skip nothing" —
+# the same safe outcome as ARMING_CHECK=1. On 4.7 Mission Planner will
+# report ARMING_CHECK as unknown when loading this file; that is expected.
+# Do not "fix" it by setting ARMING_SKIPCHK to anything but 0 here.
 
 # ---- Failsafes ----
 FS_THR_ENABLE,1                # RC loss failsafe ON
