@@ -27,18 +27,30 @@
 
 # ---- Frame ----
 FRAME_CLASS,1                  # Quad
-# FRAME_TYPE 12 = BetaFlightX: M1 rear-right, M2 front-right, M3 rear-left,
-# M4 front-left. The AIO's ESC pads follow betaflight motor order. Has to be
-# set here: the 743v2 hwdef says `HAL_FRAME_TYPE 12` but copter only reads
-# HAL_FRAME_TYPE_DEFAULT, so the firmware default is still 1 (ArduPilot X),
-# which puts motors on the wrong arms = flips on takeoff. motor test to confirm
-FRAME_TYPE,12                  # BetaFlightX
+# Standard ArduPilot X + explicit pad mapping, matching how the motors are
+# actually wired to the AIO's ESC pads:
+#   pad 1 = rear-right, pad 2 = front-left, pad 3 = rear-left, pad 4 = front-right
+# That's not betaflight order (BF wants pad 2 front-right / pad 4 front-left),
+# so FRAME_TYPE 12 would swap those two motors = flips on takeoff. Instead use
+# X and point each output at the right motor. X motor table (AP_MotorsMatrix):
+#   Motor1 front-right CCW (test A), Motor2 rear-left CCW (test C),
+#   Motor3 front-left  CW  (test D), Motor4 rear-right CW (test B)
+# If the motors get rewired, these 4 SERVO lines have to change too.
+FRAME_TYPE,1                   # X
+SERVO1_FUNCTION,36             # pad 1 rear-right  = Motor4
+SERVO2_FUNCTION,35             # pad 2 front-left  = Motor3
+SERVO3_FUNCTION,34             # pad 3 rear-left   = Motor2
+SERVO4_FUNCTION,33             # pad 4 front-right = Motor1
 
 # ---- Motor output ----
 # PWM1-4 are the built in Bluejay ESC (0.19.2, DShot300/600 + bidirectional
 # DShot), one timer group (TIM1) so they share a protocol. hwdef doesn't set
-# this so it would default to normal PWM. DShot600 needs no ESC calibration.
-MOT_PWM_TYPE,6                 # DShot600
+# this so it would default to normal PWM. DShot needs no ESC calibration.
+MOT_PWM_TYPE,5                 # DShot300
+#
+# AHRS_ORIENTATION isn't set here on purpose, it depends on which way the FC
+# is mounted. Set it on the FC (default 0 = arrow forward). Loading this file
+# won't touch it.
 
 # ---- SERIAL1 (UART1), ESP32 ----
 # has to match FC_BAUD 57600 in config.h. MAVLink2 is already the default,

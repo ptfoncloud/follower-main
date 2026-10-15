@@ -54,6 +54,11 @@ boards do).
   params only show up after a reboot), reboot
 - [ ] Check `SERIAL8_PROTOCOL` reads -1 (onboard bluetooth off). It's an
   open MAVLink link anyone nearby could arm through, so it stays off.
+- [ ] Board orientation: set `AHRS_ORIENTATION` for how the FC is mounted
+  (0 = arrow pointing forward, it's not in the param file). Reboot, then
+  with the FC on the frame tip the nose down: only pitch should change on
+  the HUD. If roll moves too the orientation is wrong. Do this before the
+  accel cal.
 - [ ] Accel calibration
 - [ ] Compass calibration (won't arm without it)
 - [ ] Radio calibration. Flip each LiteRadio switch and write down which
@@ -69,28 +74,29 @@ boards do).
 
 ## 3. Motors (props off)
 
-- [ ] Check `FRAME_TYPE` reads 12 after loading the params. The firmware
-  default on this target is 1, which puts motors on the wrong arms.
-- [ ] Mission Planner motor test, props off. `FRAME_TYPE,12` is
-  BetaFlightX, so outputs follow the betaflight layout of the AIO's ESC
-  pads (from ArduPilot's AP_MotorsMatrix BF_X table):
+- [ ] After loading the params check `FRAME_TYPE` = 1 and `SERVO1_FUNCTION`
+  .. `SERVO4_FUNCTION` = 36, 35, 34, 33. Those match the actual pad wiring:
 
-  | Output | Position | Spin | Motor test button |
-  |---|---|---|---|
-  | M1 | rear right | CW | B |
-  | M2 | front right | CCW | A |
-  | M3 | rear left | CCW | C |
-  | M4 | front left | CW | D |
+  | Pad | Position | Output does | Spin | Motor test button |
+  |---|---|---|---|---|
+  | 1 | rear right | Motor4 (`SERVO1_FUNCTION,36`) | CW | B |
+  | 2 | front left | Motor3 (`SERVO2_FUNCTION,35`) | CW | D |
+  | 3 | rear left | Motor2 (`SERVO3_FUNCTION,34`) | CCW | C |
+  | 4 | front right | Motor1 (`SERVO4_FUNCTION,33`) | CCW | A |
 
-  Mission Planner's motor test goes by letter, clockwise from front right
-  (A = front right = M2, not M1). Each button has to spin the motor in
-  that spot in that direction. Wrong spot = wrong frame type or pads,
-  stop. Wrong direction = swap any two of that motor's wires (or reverse
-  it in the Bluejay config).
-- [ ] Motors are on DShot600 (`MOT_PWM_TYPE,6`, the Bluejay ESC does
-  DShot300/600), so no ESC calibration.
-  If the motors don't respond at all in the motor test, check that
-  first.
+  This isn't betaflight order, so don't use `FRAME_TYPE,12` with this
+  wiring, it would swap the front-left and front-right motors. If the
+  motors ever get rewired these four lines change too.
+- [ ] Mission Planner motor test, props off, on battery. It goes by letter,
+  clockwise from front right: A front right, B rear right, C rear left,
+  D front left. Each button has to spin the motor in that spot, in the
+  direction above (front right and rear left CCW, front left and rear
+  right CW). Wrong spot = mapping is wrong, stop and fix it before
+  anything else. Wrong direction = swap any two of that motor's wires
+  (or reverse it in the Bluejay config).
+- [ ] Motors are on DShot300 (`MOT_PWM_TYPE,5`, the Bluejay ESC does
+  DShot300/600), so no ESC calibration. If the motors don't respond at
+  all in the motor test, check that first.
 - [ ] E-stop switch kills all motors instantly while armed
 
 ## 4. Sensors
