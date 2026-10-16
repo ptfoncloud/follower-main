@@ -94,8 +94,10 @@ boards do).
   right CW). Wrong spot = mapping is wrong, stop and fix it before
   anything else. Wrong direction = swap any two of that motor's wires
   (or reverse it in the Bluejay config).
-- [ ] Motors are on DShot300 (`MOT_PWM_TYPE,5`, the Bluejay ESC does
-  DShot300/600), so no ESC calibration. If the motors don't respond at
+- [ ] Motors are on DShot300 (`MOT_PWM_TYPE,5`), MicoAir's recommended
+  starting protocol for this board
+  ([AIO 35A manual](https://micoair.cn/en/docs/flight-controller/micoair743-aio-series/micoair743v2-aio-35a-manual)). The Bluejay ESC also does DShot600. No ESC
+  calibration needed. If the motors don't respond at
   all in the motor test, check that first.
 - [ ] E-stop switch kills all motors instantly while armed
 

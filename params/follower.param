@@ -46,6 +46,9 @@ SERVO4_FUNCTION,33             # pad 4 front-right = Motor1
 # PWM1-4 are the built in Bluejay ESC (0.19.2, DShot300/600 + bidirectional
 # DShot), one timer group (TIM1) so they share a protocol. hwdef doesn't set
 # this so it would default to normal PWM. DShot needs no ESC calibration.
+# DShot300 is MicoAir's recommended starting protocol for this board (ESC
+# table + "Start with DShot300" in the ESC section of the AIO 35A manual):
+# https://micoair.cn/en/docs/flight-controller/micoair743-aio-series/micoair743v2-aio-35a-manual
 MOT_PWM_TYPE,5                 # DShot300
 #
 # AHRS_ORIENTATION isn't set here on purpose, it depends on which way the FC
@@ -92,8 +95,9 @@ SERIAL6_PROTOCOL,23
 SERIAL8_PROTOCOL,-1
 
 # ---- Battery monitor ----
-# 21.12 / 14.14 are MicoAir's values for the AIO 35A
-# (micoair.com/flightcontroller_micoair743v2_aio_35a). The shared 743v2 hwdef
+# 21.12 / 14.14 are MicoAir's values for the AIO 35A (product page
+# micoair.com/flightcontroller_micoair743v2_aio_35a and the manual:
+# https://micoair.cn/en/docs/flight-controller/micoair743-aio-series/micoair743v2-aio-35a-manual). The shared 743v2 hwdef
 # has HAL_BATT_CURR_SCALE 40.2, that's the standalone board, so
 # BATT_AMP_PERVLT has to be set here. Still not a calibration, check voltage
 # against a multimeter (and current against a meter/known load if you can).
